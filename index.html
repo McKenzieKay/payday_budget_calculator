@@ -1097,6 +1097,9 @@ function saveBalance() {
   }
   savedGroundTruth = { ...balanceOverride };
   document.getElementById("saveBtn").disabled = true;
+  // Reset amount input
+  const amtInput = document.getElementById("balanceAmount");
+  if (amtInput) amtInput.value = "";
   updateBaselineBox();
   setTimeout(() => {
     const box = document.getElementById("baselineBox");
