@@ -197,6 +197,11 @@
     opacity: 0.45;
   }
 
+  .income-card[draggable="true"] { cursor: grab; }
+  .income-card[draggable="true"]:active { cursor: grabbing; }
+  .income-card.drag-over { border: 1.5px dashed var(--blue); background: var(--blue-bg); }
+  .income-card.dragging { opacity: 0.4; }
+
   .income-card .income-chevron {
     font-size: 18px;
     color: var(--text-hint);
@@ -235,6 +240,7 @@
     background: transparent;
     outline: none;
     width: 100%;
+    max-width: 33%;
   }
 
   .income-source-name:focus { outline: none; }
@@ -1173,7 +1179,7 @@ function renderBaselineContent(overrideData, period, isTest) {
       <div class="sub">Bills from this date forward</div>
     </div>
     <div class="bills-col">
-      <div class="label">Don't go below</div>
+      <div class="label">Lowest Limit</div>
       <div class="amount" style="color:var(--red)">${fmt(dontGoBelow)}</div>
     </div>
     <div class="income-col">
@@ -1525,7 +1531,7 @@ function renderPeriods(periods) {
           <div class="sub">${dateRange}</div>
         </div>
         <div class="bills-col">
-          <div class="label">Don't go below</div>
+          <div class="label">Lowest Limit</div>
           <div class="amount" style="color:var(--red)">${fmt(Math.ceil((r.totalBills + BUFFER) / 100) * 100)}</div>
         </div>
         <div class="income-col">
@@ -1644,7 +1650,7 @@ function renderPeriods(periods) {
       card.innerHTML = `
         <div class="period-summary">
           <div class="period-date">${payDayStr}<div class="sub">${dateRange}</div></div>
-          <div class="bills-col"><div class="label">Don't go below</div><div class="amount" style="color:var(--red)">${fmt(Math.ceil((r.totalBills + BUFFER) / 100) * 100)}</div></div>
+          <div class="bills-col"><div class="label">Lowest Limit</div><div class="amount" style="color:var(--red)">${fmt(Math.ceil((r.totalBills + BUFFER) / 100) * 100)}</div></div>
           <div class="income-col"><div class="label">Income</div><div class="amount">${fmt(r.totalIn)}</div></div>
           <div class="bills-col"><div class="label">Bills</div><div class="amount">${fmt(r.totalBills)}</div></div>
           <div class="pullout-badge ${isZero ? "zero" : "available"}">${isZero ? "Bills only" : fmt(Math.round(r.lumpSum))}</div>
@@ -1727,6 +1733,28 @@ function buildBillRow(bill, idx) {
 
   const card = document.createElement("div");
   card.className = "income-card" + (billExpired ? " expired" : "");
+  card.draggable = true;
+  card.dataset.idx = idx;
+  card.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("text/plain", idx);
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(() => card.classList.add("dragging"), 0);
+  });
+  card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  card.addEventListener("dragover", e => { e.preventDefault(); card.classList.add("drag-over"); });
+  card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+  card.addEventListener("drop", e => {
+    e.preventDefault();
+    card.classList.remove("drag-over");
+    const fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+    const toIdx = parseInt(card.dataset.idx);
+    if (fromIdx !== toIdx) {
+      const moved = BILLS.splice(fromIdx, 1)[0];
+      BILLS.splice(toIdx, 0, moved);
+      renderBillsTable();
+      refresh();
+    }
+  });
   card.innerHTML = `
     <div class="income-dots-wrap">
       <button class="income-dots-btn" onclick="event.stopPropagation();document.getElementById('${menuId}').classList.toggle('open');" aria-label="Options">&#8942;</button>
@@ -1738,9 +1766,9 @@ function buildBillRow(bill, idx) {
       </div>
     </div>
     <div class="income-row-main" style="grid-template-columns:1fr auto auto;cursor:pointer;"
-      onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='SELECT'&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
+      onclick="if(!event.target.closest('.income-dots-wrap')&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
       <div style="display:flex;align-items:center;">
-        <input class="income-source-name" value="${bill.name}" ${billExpired && !bill.editing ? 'readonly style="pointer-events:none;"' : `onchange="updateBill(${idx},'name',this.value)"`} onclick="event.stopPropagation()">
+        <input class="income-source-name" value="${bill.name}" ${billExpired && !bill.editing ? 'readonly style="pointer-events:none;"' : `readonly ondblclick="this.removeAttribute('readonly');if(this.value==='New Bill')this.value='';this.focus();event.stopPropagation();" onchange="updateBill(${idx},'name',this.value)" onblur="if(!this.value)this.value='New Bill';this.setAttribute('readonly',true)" onkeydown="if(event.key==='Enter')this.blur()"`} style="cursor:pointer;">
         ${billExpired ? '<span class="expired-badge">Archived</span>' : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${amtPill}</div>
@@ -1756,6 +1784,7 @@ function buildBillRow(bill, idx) {
             <input style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;"
               type="text" inputmode="decimal"
               value="${bill.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}"
+              onfocus="if(parseFloat(this.value.replace(/,/g,''))===0)this.value=''"
               onchange="updateBill(${idx},'amt',parseFloat(this.value.replace(/,/g,'')))"
               oninput="liveFormatAmount(this)">
           </div>
@@ -1792,7 +1821,7 @@ function buildBillRow(bill, idx) {
       </div>
       </div>
       <div style="display:flex;justify-content:flex-end;padding-top:10px;">
-        <button onclick="saveToStorage();showSavedToast()"
+        <button onclick="saveToStorage();showSavedToast();this.closest('.income-expand').classList.remove('open')"
           style="font-size:12px;padding:5px 16px;border-radius:6px;border:0.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;font-weight:500;">Save</button>
       </div>
 
@@ -1837,8 +1866,16 @@ function toggleBillEdit(idx) {
 
 function addBillRow() {
   BILLS.push({ name: "New Bill", days: [1], amt: 0, freq: "monthly", startDate: "" });
-  renderBillsTable();
-  document.getElementById("billsBody").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const newIdx = BILLS.length - 1;
+  renderBillsTable(newIdx);
+  // Auto-open the expand panel on the new card
+  setTimeout(() => {
+    const expandEl = document.getElementById(`bill-expand-${newIdx}`);
+    if (expandEl) {
+      expandEl.classList.add("open");
+      expandEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, 50);
 }
 
 // ── Income data ──────────────────────────────────────────────────────────
@@ -1941,7 +1978,7 @@ function buildIncomeRow(src, idx) {
         value="${amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}"
         onchange="updateIncomeAmt(${idx},${ai},parseFloat(this.value.replace(/,/g,'')))"
         oninput="liveFormatAmount(this)"
-        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+        onfocus="if(parseFloat(this.value.replace(/,/g,''))===0)this.value='';this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
       ${amounts.length > 1 ? `<button onclick="removeIncomeAmt(${idx},${ai})" style="background:none;border:none;color:var(--text-hint);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>` : ""}
     </div>`).join("");
 
@@ -1968,6 +2005,28 @@ function buildIncomeRow(src, idx) {
 
   const card = document.createElement("div");
   card.className = "income-card" + (srcExpired ? " expired" : "");
+  card.draggable = true;
+  card.dataset.idx = idx;
+  card.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("text/plain", idx);
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(() => card.classList.add("dragging"), 0);
+  });
+  card.addEventListener("dragend", () => card.classList.remove("dragging"));
+  card.addEventListener("dragover", e => { e.preventDefault(); card.classList.add("drag-over"); });
+  card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+  card.addEventListener("drop", e => {
+    e.preventDefault();
+    card.classList.remove("drag-over");
+    const fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+    const toIdx = parseInt(card.dataset.idx);
+    if (fromIdx !== toIdx) {
+      const moved = INCOME_SOURCES.splice(fromIdx, 1)[0];
+      INCOME_SOURCES.splice(toIdx, 0, moved);
+      renderIncomeTable();
+      refresh();
+    }
+  });
   card.innerHTML = `
     <div class="income-dots-wrap">
       <button class="income-dots-btn" onclick="event.stopPropagation();document.getElementById('${menuId}').classList.toggle('open');" aria-label="Options">&#8942;</button>
@@ -1979,9 +2038,9 @@ function buildIncomeRow(src, idx) {
       </div>
     </div>
     <div class="income-row-main" style="grid-template-columns:1fr auto auto;cursor:pointer;"
-      onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='SELECT'&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
+      onclick="if(!event.target.closest('.income-dots-wrap')&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
       <div style="display:flex;align-items:center;">
-        <input class="income-source-name" value="${src.source}" ${srcExpired && !src.editing ? 'readonly style="pointer-events:none;"' : `onchange="updateIncome(${idx},'source',this.value)"`} onclick="event.stopPropagation()">
+        <input class="income-source-name" value="${src.source}" ${srcExpired && !src.editing ? 'readonly style="pointer-events:none;"' : `readonly ondblclick="this.removeAttribute('readonly');if(this.value==='New Income')this.value='';this.focus();event.stopPropagation();" onchange="updateIncome(${idx},'source',this.value)" onblur="if(!this.value)this.value='New Income';this.setAttribute('readonly',true)" onkeydown="if(event.key==='Enter')this.blur()"`} style="cursor:pointer;">
         ${srcExpired ? '<span class="expired-badge">Archived</span>' : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;">${pills}</div>
@@ -1989,6 +2048,21 @@ function buildIncomeRow(src, idx) {
     </div>
     <div class="income-expand" id="${expandId}">
       <div style="${srcExpired && !src.editing ? 'pointer-events:none;opacity:0.65;' : ''}">
+      <div class="income-pattern-grid">
+        <div>
+          <div class="income-field-label" style="margin-bottom:8px;">Amounts</div>
+          ${amtRows}
+          <button onclick="addIncomeAmt(${idx})" style="font-size:12px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;margin-top:8px;">+ add amount</button>
+        </div>
+        <div>
+          <div class="income-field-label" style="margin-bottom:8px;">Pattern <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-hint);margin-left:4px;">repeats after last step</span></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;">${flowSteps}</div>
+          <div style="margin-left:50px;padding:3px 0;"><span style="font-size:14px;color:var(--text-hint);">↓</span></div>
+          <div style="margin-left:50px;font-size:10px;color:var(--text-hint);background:var(--surface);border:0.5px dashed var(--border-strong);border-radius:4px;padding:3px 8px;display:inline-block;">↩ repeat</div>
+          <button onclick="addIncomeSeq(${idx})" style="display:block;margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;">+ add step</button>
+        </div>
+      </div>
+      <hr style="border:none;border-top:0.5px solid var(--border);margin:1.25rem 0;">
       <div class="income-expand-grid">
         <div class="income-field">
           <span class="income-field-label">Frequency</span>
@@ -2013,24 +2087,9 @@ function buildIncomeRow(src, idx) {
           </div>
         </div>
       </div>
-      <hr style="border:none;border-top:0.5px solid var(--border);margin:0 0 1.25rem;">
-      <div class="income-pattern-grid">
-        <div>
-          <div class="income-field-label" style="margin-bottom:8px;">Amounts</div>
-          ${amtRows}
-          <button onclick="addIncomeAmt(${idx})" style="font-size:12px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;margin-top:8px;">+ add amount</button>
-        </div>
-        <div>
-          <div class="income-field-label" style="margin-bottom:8px;">Pattern <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-hint);margin-left:4px;">repeats after last step</span></div>
-          <div style="display:flex;flex-direction:column;align-items:flex-start;">${flowSteps}</div>
-          <div style="margin-left:50px;padding:3px 0;"><span style="font-size:14px;color:var(--text-hint);">↓</span></div>
-          <div style="margin-left:50px;font-size:10px;color:var(--text-hint);background:var(--surface);border:0.5px dashed var(--border-strong);border-radius:4px;padding:3px 8px;display:inline-block;">↩ repeat</div>
-          <button onclick="addIncomeSeq(${idx})" style="display:block;margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;">+ add step</button>
-        </div>
-      </div>
       </div>
       <div style="display:flex;justify-content:flex-end;padding-top:10px;">
-        <button onclick="saveToStorage();showSavedToast()"
+        <button onclick="saveToStorage();showSavedToast();this.closest('.income-expand').classList.remove('open')"
           style="font-size:12px;padding:5px 16px;border-radius:6px;border:0.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;font-weight:500;">Save</button>
       </div>
 
@@ -2137,8 +2196,15 @@ function addIncomeRow() {
   const td = new Date(); const tds = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,"0")}-${String(td.getDate()).padStart(2,"0")}`;
   INCOME_SOURCES.push({ source: "New Income", freq: "biweekly", startDate: tds, endDate: "",
     amounts: [0], amtNames: ["Amount A"], sequence: [0] });
-  renderIncomeTable();
-  document.getElementById("incomeBody").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const newIdx = INCOME_SOURCES.length - 1;
+  renderIncomeTable(newIdx);
+  setTimeout(() => {
+    const expandEl = document.getElementById(`income-expand-${newIdx}`);
+    if (expandEl) {
+      expandEl.classList.add("open");
+      expandEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, 50);
 }
 
 function refresh() {
@@ -2200,8 +2266,8 @@ function showWelcome() {
       <h2 style="font-size:20px;font-weight:500;color:var(--text);margin-bottom:0.5rem;">Welcome to Payday Budget Calculator</h2>
       <p style="font-size:14px;margin-bottom:2rem;">Add your income sources and bills to get started, then set your current balance.</p>
       <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-        <button onclick="switchTab('income')" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #185fa5;background:#e6f1fb;color:#185fa5;cursor:pointer;font-weight:500;">Add Income →</button>
-        <button onclick="switchTab('bills')" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #6c3483;background:#f0e6f6;color:#6c3483;cursor:pointer;font-weight:500;">Add Bills →</button>
+        <button onclick="switchTab('income');setTimeout(addIncomeRow,50);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #185fa5;background:#e6f1fb;color:#185fa5;cursor:pointer;font-weight:500;">Add Income →</button>
+        <button onclick="switchTab('bills');setTimeout(addBillRow,50);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #6c3483;background:#f0e6f6;color:#6c3483;cursor:pointer;font-weight:500;">Add Bills →</button>
         <button onclick="document.getElementById('bufferInput').focus();document.getElementById('bufferInput').select();" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid var(--green-dark);background:var(--green-bg);color:var(--green-dark);cursor:pointer;font-weight:500;">Add Buffer →</button>
       </div>
     </div>`;
