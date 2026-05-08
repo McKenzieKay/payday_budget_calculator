@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payday Budget Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.2);
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --text-hint: #999;
+    --green-bg: #eaf3de;
+    --green: #3b6d11;
+    --green-dark: #27500a;
+    --amber-bg: #faeeda;
+    --amber: #854f0b;
+    --blue-bg: #e6f1fb;
+    --blue: #185fa5;
+    --blue-dark: #0c447c;
+    --red-bg: #fcebeb;
+    --red: #a32d2d;
+    --purple-bg: #eeedfe;
+    --purple: #534ab7;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --surface: #242424;
+      --border: rgba(255,255,255,0.1);
+      --border-strong: rgba(255,255,255,0.2);
+      --text: #f0f0f0;
+      --text-muted: #aaa;
+      --text-hint: #777;
+      --green-bg: #173404;
+      --green: #97c459;
+      --green-dark: #c0dd97;
+      --amber-bg: #412402;
+      --amber: #ef9f27;
+      --blue-bg: #042c53;
+      --blue: #85b7eb;
+      --blue-dark: #b5d4f4;
+      --red-bg: #501313;
+      --red: #f09595;
+      --purple-bg: #26215c;
+      --purple: #afa9ec;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .tab-bar {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 1.5rem;
+    gap: 0;
+  }
+
+  .tab-btn {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px;
+    transition: color 0.15s;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--blue); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .bills-table { width: 100%; border-collapse: collapse; }
+  .bills-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg);
+  }
+
+  .bills-table td {
+    padding: 8px 12px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .bills-table tr:last-child td { border-bottom: none; }
+  .bills-table tr:hover td { background: var(--bg); }
+
+  .bill-input {
+    font-size: 13px;
+    border: 0.5px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    background: transparent;
+    color: var(--text);
+    width: 100%;
+  }
+
+  .bill-input:hover { border-color: var(--border-strong); }
+  .bill-input:focus { border-color: var(--blue); outline: none; background: var(--surface); }
+
+  .bill-select {
+    font-size: 13px;
+    border: 0.5px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .bill-select:hover { border-color: var(--border-strong); background: var(--surface); }
+  .bill-select:focus { border-color: var(--blue); outline: none; background: var(--surface); }
+
+  .bill-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-hint);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+
+  .bill-delete-btn:hover { color: var(--red); background: var(--red-bg); }
+
+  .add-bill-btn {
+    margin: 1rem 0;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--blue);
+    background: var(--blue-bg);
+    color: var(--blue);
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .add-bill-btn:hover { background: var(--blue); color: #fff; }
+
+  .bills-panel-wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 6px; }
+  .tog { width: 34px; height: 18px; border-radius: 9px; background: var(--border-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; border: none; padding: 0; }
+  .tog.on { background: #378ADD; }
+  .tog::after { content: ""; width: 14px; height: 14px; background: #fff; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: left 0.2s; }
+  .tog.on::after { left: 18px; }
+  .tog-label { font-size: 12px; color: var(--text-muted); }
+  .tog.on + .tog-label { color: var(--text); }
+
+  .bills-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .income-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    position: relative;
+    overflow: visible;
+  }
+
+  .income-card.expired {
+    opacity: 0.45;
+  }
+
+  .expired-badge {
+    font-size: 10px;
+    color: var(--text-hint);
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-left: 8px;
+  }
+
+  .income-row-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 12px 42px 12px 16px;
+  }
+
+  .income-source-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    border-bottom: 1px solid transparent;
+  }
+
+  .income-source-name:focus { border-bottom-color: var(--border-strong); }
+
+  .income-dots-wrap { position: absolute; top: 8px; right: 10px; }
+  .income-dots-btn { background: none; border: none; color: var(--text-hint); cursor: pointer; font-size: 18px; padding: 2px 4px; border-radius: 4px; line-height: 1; }
+  .income-dots-btn:hover { background: var(--bg); color: var(--text); }
+  .income-dropdown { display: none; position: absolute; top: 100%; right: 0; background: var(--surface); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); min-width: 100px; z-index: 50; overflow: hidden; }
+  .income-dropdown.open { display: block; }
+  .income-dropdown button { display: block; width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; background: none; border: none; cursor: pointer; color: var(--red); }
+  .income-dropdown button:hover { background: var(--red-bg); }
+
+  .income-expand { display: none; border-top: 0.5px solid var(--border); padding: 16px; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); }
+  .income-expand.open { display: block; }
+  .income-expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  .income-field { display: flex; flex-direction: column; gap: 5px; }
+  .income-field-label { font-size: 11px; font-weight: 600; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .income-field select, .income-field input[type=date] { font-size: 13px; border: 0.5px solid var(--border-strong); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--text); width: 100%; }
+  .income-pattern-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .income-hdr { font-size: 11px; font-weight: 600; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; padding: 0 4px 0 16px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: center; }
+
+
+
+  header {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .stat-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border-strong);
+    color: var(--text-muted);
+  }
+
+  .stat-pill strong {
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  .summary-card .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .summary-card .value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .summary-card .sub {
+    font-size: 11px;
+    color: var(--text-hint);
+    margin-top: 3px;
+  }
+
+  .summary-card.green .value { color: var(--green); }
+  .summary-card.blue .value  { color: var(--blue);  }
+  .summary-card.amber .value { color: var(--amber); }
+
+  .month-section { margin-bottom: 2.5rem; }
+
+  .month-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    padding-left: 2px;
+  }
+
+  .period-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .period-summary {
+    display: grid;
+    grid-template-columns: 1fr 130px 110px 110px auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem 2rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+
+  .period-summary:hover { background: var(--bg); }
+
+  .period-date {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .period-date .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  .income-col {
+    text-align: right;
+  }
+
+  .income-col .label {
+    font-size: 10px;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .income-col .amount {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .bills-col {
+    text-align: right;
+  }
+
+  .bills-col .label {
+    font-size: 10px;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .bills-col .amount {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .pullout-badge {
+    min-width: 110px;
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .pullout-badge.available {
+    background: var(--green-bg);
+    color: var(--green-dark);
+  }
+
+  .pullout-badge.zero {
+    background: var(--amber-bg);
+    color: var(--amber);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .chevron {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-hint);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .chevron-icon {
+    font-size: 18px;
+    line-height: 1;
+    transition: transform 0.2s;
+  }
+
+  .period-card.open .chevron-icon { transform: rotate(180deg); }
+
+  .period-detail {
+    display: none;
+    border-top: 0.5px solid var(--border);
+    padding: 0;
+  }
+
+  .period-card.open .period-detail { display: block; }
+
+  .detail-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 8px 1.25rem;
+    background: var(--bg);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .bill-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 10px 1.25rem;
+    border-top: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+
+  .bill-row:first-of-type { border-top: none; }
+
+  .bill-day {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 2px 7px;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .bill-name { color: var(--text); }
+
+  .bill-amount {
+    font-weight: 500;
+    color: var(--text);
+    text-align: right;
+  }
+
+  .bill-total-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 10px 1.25rem;
+    border-top: 1px solid var(--border-strong);
+    background: var(--bg);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .bill-total-row .total-label { color: var(--text-muted); }
+  .bill-total-row .total-amount { color: var(--text); }
+
+  .income-breakdown {
+    display: flex;
+    gap: 1.5rem;
+    padding: 10px 1.25rem;
+    border-top: 0.5px solid var(--border);
+    background: var(--green-bg);
+  }
+
+  .income-item { font-size: 12px; color: var(--green); }
+  .income-item strong { font-weight: 600; }
+
+  .period-cover-note {
+    font-size: 12px;
+    color: var(--amber);
+    padding: 10px 1.25rem;
+    background: var(--amber-bg);
+    border-top: 0.5px solid var(--border);
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 12px;
+    color: var(--text-hint);
+  }
+
+  .archive-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .archive-banner strong { color: var(--text); }
+
+  .archive-btn {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .archive-btn:hover { background: var(--bg); }
+
+  .balance-bar {
+    background: var(--blue-bg);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  .balance-bar label {
+    font-size: 13px;
+    color: var(--blue);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .balance-bar input[type="date"] {
+    font-size: 13px;
+    padding: 5px 10px;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    height: 32px;
+    width: 150px;
+  }
+
+
+  .balance-bar input[type="date"]   { width: 150px; }
+
+  .balance-bar button {
+    font-size: 13px;
+    padding: 5px 14px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--blue);
+    background: var(--blue);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .balance-bar button:hover { opacity: 0.88; }
+
+  .balance-bar .reset-btn {
+    background: transparent;
+    color: var(--blue);
+    border-color: var(--border-strong);
+  }
+
+  .balance-bar .save-btn {
+    background: #1a6ef5;
+    border-color: #1a6ef5;
+    color: #fff;
+  }
+
+  .balance-bar .save-btn:hover {
+    opacity: 0.88;
+  }
+
+  .balance-bar .save-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .saved-badge {
+    font-size: 11px;
+    color: var(--green);
+    font-weight: 500;
+    display: none;
+  }
+
+  .balance-bar .hint {
+    font-size: 11px;
+    color: var(--blue);
+    opacity: 0.7;
+  }
+
+  .period-card.updated-period > .period-summary {
+    border-left: 3px solid var(--blue);
+  }
+
+  @media (max-width: 600px) {
+    .period-summary {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+    }
+    .income-col { display: none; }
+    .bills-col  { display: none; }
+  }
+  .baseline-box {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  .baseline-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-left: 3px solid #9b59b6;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    overflow: hidden;
+  }
+
+  .baseline-card.shortfall {
+    border-left-color: var(--red);
+    border-color: rgba(162,45,45,0.25);
+  }
+
+  .bl-menu-wrap { position: relative; }
+  .bl-dots { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-muted); padding: 2px 6px; border-radius: 4px; line-height: 1; }
+  .bl-dots:hover { background: var(--bg); color: var(--text); }
+  .bl-dropdown { display: none; position: absolute; top: 100%; right: 0; background: var(--surface); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); min-width: 100px; z-index: 50; overflow: hidden; }
+  .bl-dropdown.open { display: block; }
+  .bl-dropdown button { display: block; width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; background: none; border: none; cursor: pointer; color: var(--red); }
+  .bl-dropdown button:hover { background: var(--red-bg); }
+
+  .baseline-card.test-preview {
+    border-left-color: #a3c900;
+    border-color: rgba(163,201,0,0.25);
+  }
+
+  .baseline-card.test-preview .baseline-header {
+    background: #e8ff4a;
+    color: #3a4d00;
+  }
+
+  .baseline-header {
+    padding: 8px 1.25rem;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0e6f6;
+    color: #6c3483;
+  }
+
+  .baseline-card.shortfall .baseline-header {
+    background: var(--red-bg);
+    color: var(--red);
+  }
+
+  .baseline-row {
+    display: grid;
+    grid-template-columns: 1fr 130px 110px 110px auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .baseline-date {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .baseline-date .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Payday Budget Tracker</h1>
+  </div>
+  <div class="header-stats" style="display:flex;align-items:center;">
+    <div style="display:flex;align-items:center;height:30px;border:0.5px solid #000;border-radius:20px;overflow:hidden;">
+      <div style="display:flex;align-items:center;padding:0 12px;gap:6px;height:100%;background:var(--surface);">
+        <span style="font-size:11px;color:#000;letter-spacing:0.05em;text-transform:uppercase;user-select:none;">Buffer</span>
+        <div style="display:flex;align-items:center;background:transparent;height:24px;padding:0 4px;gap:2px;">
+          <span style="font-size:13px;color:var(--text-muted);user-select:none;">$</span>
+          <input id="bufferInput" type="text" inputmode="numeric" value="0"
+            style="width:52px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--text);padding:0;text-align:right;outline:none;"
+            oninput="onBufferInput(this)" onblur="formatBufferInput(this)" onfocus="stripAmountInput(this)">
+        </div>
+      </div>
+      <button onclick="saveBuffer()" style="font-size:10px;padding:0 12px;height:100%;border:none;border-left:0.5px solid #000;background:#fff;color:#000;cursor:pointer;font-weight:600;letter-spacing:0.03em;">Save</button>
+    </div>
+  </div>
+</header>
+
+<div class="balance-bar">
+  <label>Update Balance:</label>
+  <input type="date" id="balanceDate">
+  <div style="display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);height:32px;padding:0 8px;gap:2px;">
+    <span style="font-size:13px;color:var(--text-muted);user-select:none;">$</span>
+    <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)"
+      style="width:120px;font-size:13px;border:none;background:transparent;color:var(--text);padding:0;outline:none;text-align:right;">
+  </div>
+  <button onclick="applyBalanceUpdate()">Test</button>
+  <button class="reset-btn" onclick="resetBalance()">Reset</button>
+  <button class="save-btn" id="saveBtn" onclick="saveBalance()">Save New Balance</button>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('budget')">Budget</button>
+  <button class="tab-btn" onclick="switchTab('bills')">Bills</button>
+  <button class="tab-btn" onclick="switchTab('income')">Income</button>
+</div>
+
+<div class="tab-panel active" id="tab-budget">
+  <main>
+    <div id="periodsContainer"></div>
+  </main>
+</div>
+
+<div class="tab-panel" id="tab-bills">
+  <div class="bills-panel-wrap">
+    <div class="income-hdr" style="grid-template-columns:1fr auto auto;">
+      <span>Name</span>
+      <span style="padding-right:1rem;">Amount</span>
+      <span style="padding-right:42px;text-align:center;">Details</span>
+    </div>
+    <div id="billsBody"></div>
+    <button class="add-bill-btn" onclick="addBillRow()">+ Add Bill</button>
+  </div>
+</div>
+
+<div class="tab-panel" id="tab-income">
+  <div class="bills-panel-wrap">
+    <div class="income-hdr" style="grid-template-columns:1fr auto auto;">
+      <span>Source</span>
+      <span style="padding-right:1rem;">Amount(s)</span>
+      <span style="padding-right:42px;text-align:center;">Details</span>
+    </div>
+    <div id="incomeBody"></div>
+    <button class="add-bill-btn" onclick="addIncomeRow()">+ Add Income</button>
+  </div>
+</div>
+
+<footer style="text-align:center;padding:1rem;font-size:11px;color:var(--text-hint);">v1.0.0</footer>
+
+<script>
+let BUFFER = 0;
+
+let BILLS = [];
+
+function daysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function isExpired(item, dt) {
+  if (!item.endDate) return false;
+  const [ey, em, ed] = item.endDate.split("-").map(Number);
+  return dt > new Date(ey, em-1, ed);
+}
+
+function hasStarted(item, dt) {
+  if (!item.startDate) return true;
+  const [sy, sm, sd] = item.startDate.split("-").map(Number);
+  return dt >= new Date(sy, sm-1, sd);
+}
+
+function billsOnDate(dt) {
+  const d = dt.getDate(), m = dt.getMonth() + 1;
+  return BILLS.filter(b => {
+    if (isExpired(b, dt)) return false;
+    if (!hasStarted(b, dt)) return false;
+    // Weekly: hits every 7 days from startDate
+    if (b.freq === "weekly") {
+      if (!b.startDate) return false;
+      const [sy, sm, sd] = b.startDate.split("-").map(Number);
+      const start = new Date(sy, sm-1, sd);
+      const diff = Math.round((dt - start) / 86400000);
+      return diff >= 0 && diff % 7 === 0;
+    }
+    // Biweekly: hits every 14 days from startDate
+    if (b.freq === "biweekly") {
+      if (!b.startDate) return false;
+      const [sy, sm, sd] = b.startDate.split("-").map(Number);
+      const start = new Date(sy, sm-1, sd);
+      const diff = Math.round((dt - start) / 86400000);
+      return diff >= 0 && diff % 14 === 0;
+    }
+    // One-time: only on the exact startDate
+    if (b.freq === "one_time") {
+      if (!b.startDate) return false;
+      const [sy, sm, sd] = b.startDate.split("-").map(Number);
+      return dt.getFullYear() === sy && dt.getMonth() + 1 === sm && dt.getDate() === sd;
+    }
+    // Annually: same day/month each year
+    if (b.freq === "annually") {
+      if (!b.days.includes(d)) return false;
+      if (!b.startDate) return false;
+      const startMonth = parseInt(b.startDate.split("-")[1]);
+      return m === startMonth;
+    }
+    if (!b.days.includes(d)) return false;
+    if (b.freq === "monthly" || b.freq === "bimonthly") return true;
+    if (b.freq === "quarterly_may") return [5,8,11].includes(m);
+    if (b.freq === "quarterly_jun") return [6,9,12].includes(m);
+    if (b.freq === "quarterly_jul") return [7,10,1].includes(m);
+    return false;
+  });
+}
+
+// Build paydays through Jan 2027
+function buildPaydays() {
+  // Generate pay periods: every 14 days covering current month -1 through +5 months
+  const now = new Date();
+  const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const rangeEnd   = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+
+  const pdSet = new Set();
+
+  // Collect all biweekly payday dates from income sources
+  INCOME_SOURCES.forEach(src => {
+    if (src.freq !== "biweekly" || !src.startDate) return;
+    const [sy,sm,sd] = src.startDate.split("-").map(Number);
+    const anchor = new Date(sy, sm-1, sd);
+    let cur = new Date(anchor);
+    // Rewind to range start
+    while (cur < rangeStart) cur = new Date(cur.getTime() + 14 * 86400000);
+    while (cur >= rangeStart) cur = new Date(cur.getTime() - 14 * 86400000);
+    cur = new Date(cur.getTime() + 14 * 86400000);
+    while (cur < rangeEnd) {
+      pdSet.add(cur.toDateString());
+      cur = new Date(cur.getTime() + 14 * 86400000);
+    }
+  });
+
+  // Also collect weekly income paydays
+  INCOME_SOURCES.forEach(src => {
+    if (src.freq !== "weekly" || !src.startDate) return;
+    const [sy,sm,sd] = src.startDate.split("-").map(Number);
+    const anchor = new Date(sy, sm-1, sd);
+    let cur = new Date(anchor);
+    while (cur < rangeStart) cur = new Date(cur.getTime() + 7 * 86400000);
+    while (cur >= rangeStart) cur = new Date(cur.getTime() - 7 * 86400000);
+    cur = new Date(cur.getTime() + 7 * 86400000);
+    while (cur < rangeEnd) {
+      pdSet.add(cur.toDateString());
+      cur = new Date(cur.getTime() + 7 * 86400000);
+    }
+  });
+
+  // If no income sources defined, fall back to every-two-weeks from today
+  if (pdSet.size === 0) {
+    let cur = new Date(now);
+    cur.setDate(1); // start of current month
+    const end = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+    while (cur < end) {
+      pdSet.add(cur.toDateString());
+      cur = new Date(cur.getTime() + 14 * 86400000);
+    }
+  }
+
+  return [...pdSet].map(s => new Date(s)).sort((a,b) => a-b);
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+function ordinal(d) {
+  if (d === 1 || d === 21 || d === 31) return d + "st";
+  if (d === 2 || d === 22) return d + "nd";
+  if (d === 3 || d === 23) return d + "rd";
+  return d + "th";
+}
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const FULL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+// No default override — user sets their own starting balance
+const today = new Date();
+const DEFAULT_OVERRIDE = null;
+
+// Balance override state — starts as the default
+let balanceOverride = null; // { date: Date, amount: number } or null
+let testOverride = null;    // preview only — shown in test box, doesn't change current period
+
+// Saved ground truth — persists across resets
+let savedGroundTruth = null;
+
+let savedBuffer = 1000;
+
+function parseBufferVal(input) {
+  return parseFloat(input.value.replace(/,/g, ""));
+}
+
+function onBufferInput(input) {
+  const raw = input.value.replace(/,/g, "");
+  const val = parseFloat(raw);
+
+  // Reformat with commas while preserving cursor position
+  const cursorPos = input.selectionStart;
+  const oldLen = input.value.length;
+  const commasBefore = (input.value.slice(0, cursorPos).match(/,/g) || []).length;
+
+  const parts = raw.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formatted = parts.join(".");
+  input.value = formatted;
+
+  // Adjust cursor for added/removed commas
+  const newCommasBefore = (formatted.slice(0, cursorPos).match(/,/g) || []).length;
+  const newCursor = cursorPos + (newCommasBefore - commasBefore);
+  input.setSelectionRange(newCursor, newCursor);
+
+  if (!isNaN(val) && val >= 0) {
+    BUFFER = val;
+    refresh();
+    if (savedGroundTruth) updateBaselineBox();
+  }
+}
+
+function formatBufferInput(input) {
+  const val = parseFloat(input.value.replace(/,/g, ""));
+  if (!isNaN(val)) {
+    input.value = val.toLocaleString("en-US");
+    BUFFER = val;
+    refresh();
+    if (savedGroundTruth) updateBaselineBox();
+  }
+}
+
+function previewBuffer() {
+  const val = parseFloat(document.getElementById("bufferInput").value.replace(/,/g, ""));
+  if (!isNaN(val) && val >= 0) {
+    BUFFER = val;
+    refresh();
+    if (savedGroundTruth) updateBaselineBox();
+  }
+}
+
+function saveBuffer() {
+  const val = parseFloat(document.getElementById("bufferInput").value.replace(/,/g, ""));
+  if (!isNaN(val) && val >= 0) {
+    savedBuffer = val;
+    BUFFER = val;
+    document.getElementById("bufferInput").value = val.toLocaleString("en-US");
+    refresh();
+    if (savedGroundTruth) updateBaselineBox();
+  }
+}
+
+function parseAmount(id) {
+  return parseFloat(document.getElementById(id).value.replace(/,/g, "")) || 0;
+}
+
+function liveFormatAmount(el) {
+  // Strip everything except digits and one decimal point
+  let raw = el.value.replace(/[^0-9.]/g, "");
+  // Keep only first decimal point
+  const parts = raw.split(".");
+  if (parts.length > 2) raw = parts[0] + "." + parts.slice(1).join("");
+  // Format integer part with commas, preserve decimal as typed
+  const dotIdx = raw.indexOf(".");
+  const intPart = dotIdx >= 0 ? raw.slice(0, dotIdx) : raw;
+  const decPart = dotIdx >= 0 ? raw.slice(dotIdx) : "";
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  el.value = formatted + decPart;
+}
+
+function formatAmountInput(el) {
+  const val = parseFloat(el.value.replace(/,/g, ""));
+  if (!isNaN(val) && val > 0) {
+    el.value = Math.round(val).toLocaleString("en-US");
+  }
+}
+
+function stripAmountInput(el) {
+  el.value = el.value.replace(/,/g, "");
+}
+
+function applyBalanceUpdate() {
+  const dateVal = document.getElementById("balanceDate").value;
+  const amtVal  = parseAmount("balanceAmount");
+  if (!dateVal || isNaN(amtVal)) {
+    return;
+  }
+  const [y, m, d] = dateVal.split("-").map(Number);
+  // testOverride drives the preview box; balanceOverride only affects periods AFTER
+  testOverride = { date: new Date(y, m-1, d), amount: amtVal };
+  balanceOverride = { date: new Date(y, m-1, d), amount: amtVal };
+  refresh();
+}
+
+function saveBalance() {
+  // If no test has been run yet, apply the current inputs first
+  if (!balanceOverride) {
+    const dateVal = document.getElementById("balanceDate").value;
+    const amtVal  = parseAmount("balanceAmount");
+    if (!dateVal || isNaN(amtVal)) {
+      return;
+    }
+    const [y, m, d] = dateVal.split("-").map(Number);
+    balanceOverride = { date: new Date(y, m-1, d), amount: amtVal };
+    refresh();
+  }
+  savedGroundTruth = { ...balanceOverride };
+  document.getElementById("saveBtn").disabled = true;
+  updateBaselineBox();
+  setTimeout(() => {
+    const box = document.getElementById("baselineBox");
+      box.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 50);
+}
+
+function deleteBaseline() {
+  savedGroundTruth = null;
+  balanceOverride = null;
+  testOverride = null;
+  document.getElementById("balanceAmount").value = "";
+  refresh();
+}
+
+function renderBaselineContent(overrideData, period, isTest) {
+  const card   = document.getElementById("baselineCard");
+  const header = document.getElementById("baselineHeader");
+  const row    = document.getElementById("baselineRow");
+  if (!card || !header || !row) return;
+
+  const dateStr = overrideData.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  // Collect bills from override date forward to next payday
+  let billsRemaining = 0;
+  const remainingBillsList = [];
+  if (period) {
+    let cur = new Date(overrideData.date);
+    while (cur.getTime() < period.nextPayday.getTime()) {
+      billsOnDate(cur).forEach(b => {
+        billsRemaining += b.amt;
+        remainingBillsList.push({ name: b.name, amt: b.amt, day: cur.getDate() });
+      });
+      cur = new Date(cur.getTime() + 86400000);
+    }
+  }
+
+  const dontGoBelow = Math.ceil((billsRemaining + BUFFER) / 100) * 100;
+  const lumpSum     = overrideData.amount - billsRemaining - BUFFER;
+  const isShortfall = lumpSum < 0;
+
+  if (isTest) {
+    card.className = "baseline-card test-preview";
+  } else {
+    card.className = "baseline-card" + (isShortfall ? " shortfall" : "");
+  }
+
+  const accentColor = isTest ? "#3a4d00" : (isShortfall ? "var(--red)" : "#6c3483");
+  const accentBg    = isTest ? "#e8ff4a"  : (isShortfall ? "var(--red-bg)" : "#f0e6f6");
+
+  const menuId = "blMenu_" + Date.now();
+  const actionBtn = isTest
+    ? ""
+    : `<div class="bl-menu-wrap">
+        <button class="bl-dots" onclick="event.stopPropagation();document.getElementById('${menuId}').classList.toggle('open');" aria-label="Options">&#8942;</button>
+        <div class="bl-dropdown" id="${menuId}">
+          <button onclick="event.stopPropagation();deleteBaseline();">Delete</button>
+        </div>
+      </div>`;
+
+  const titleLabel = isTest ? "Test Preview —" : "New Balance Saved —";
+  const icon = isTest ? "ti-flask" : (isShortfall ? "ti-circle-x" : "ti-circle-check");
+
+  header.style.display = "none";
+
+  const badgeStyle = `background:${accentBg};color:${accentColor};padding:8px 14px;border-radius:6px;font-size:15px;font-weight:700;min-width:110px;text-align:center;`;
+
+  const toggleDetail = () => {
+    const detail = document.getElementById("baselineDetail");
+    if (detail) {
+      const open = detail.style.display !== "none";
+      detail.style.display = open ? "none" : "block";
+      const chev = document.getElementById("baselineChevron");
+      if (chev) chev.textContent = open ? "▾" : "▴";
+    }
+  };
+
+  row.style.cursor = "pointer";
+  row.onclick = toggleDetail;
+
+  const badgeBg = isTest ? "#e8ff4a" : isShortfall ? "var(--red-bg)" : "#f0e6f6";
+  const badgeFg = isTest ? "#3a4d00" : isShortfall ? "var(--red)" : "#6c3483";
+
+  row.innerHTML = `
+    <div class="period-date">
+      Balance on ${dateStr}
+      <div class="sub">Bills from this date forward</div>
+    </div>
+    <div class="bills-col">
+      <div class="label">Don't go below</div>
+      <div class="amount" style="color:var(--red)">${fmt(dontGoBelow)}</div>
+    </div>
+    <div class="income-col">
+      <div class="label">Balance ${isTest ? "entered" : "saved"}</div>
+      <div class="amount" style="color:${isTest ? "#3a4d00" : "#6c3483"}">${fmt(overrideData.amount)}</div>
+    </div>
+    <div class="bills-col">
+      <div class="label">Bills remaining</div>
+      <div class="amount">${fmt(billsRemaining)}</div>
+    </div>
+    <div style="background:${badgeBg};color:${badgeFg};min-width:110px;text-align:center;padding:8px 14px;border-radius:6px;font-size:15px;font-weight:700;">${fmt(lumpSum)}</div>
+  `;
+
+  // Inject three-dot menu into top-right of card
+  const existingMenu = card.querySelector(".bl-menu-wrap");
+  if (existingMenu) existingMenu.remove();
+  if (actionBtn) {
+    const menuWrap = document.createElement("div");
+    menuWrap.style.cssText = "position:absolute;top:10px;right:12px;";
+    menuWrap.innerHTML = actionBtn;
+    card.style.position = "relative";
+    card.appendChild(menuWrap);
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".bl-dropdown.open").forEach(d => d.classList.remove("open"));
+  }, { once: false });
+
+  // Build expandable bill detail
+  const billRows = remainingBillsList.map(b => `
+    <div class="bill-row">
+      <span class="bill-day">${ordinal(b.day)}</span>
+      <span class="bill-name">${b.name}</span>
+      <span class="bill-amount">${fmt(b.amt)}</span>
+    </div>`).join("");
+
+  // Remove old detail if exists, then append fresh
+  const oldDetail = document.getElementById("baselineDetail");
+  if (oldDetail) oldDetail.remove();
+
+  const detail = document.createElement("div");
+  detail.id = "baselineDetail";
+  detail.style.display = "none";
+  detail.style.borderTop = "0.5px solid var(--border)";
+  detail.innerHTML = `
+    <div class="detail-header" style="display:grid;grid-template-columns:1fr auto;padding:8px 1.25rem;background:var(--bg);font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.06em;">
+      <span>Bills remaining this period</span><span>Amount</span>
+    </div>
+    ${billRows}
+    <div class="bill-total-row">
+      <span class="total-label">Total</span>
+      <span class="total-amount">${fmt(billsRemaining)}</span>
+    </div>`;
+
+  card.appendChild(detail);
+
+}
+
+function updateBaselineBox() {
+  refresh(); // renderPeriods will inject and populate the box
+}
+
+function resetBalance() {
+  // Reset buffer to saved value
+  BUFFER = savedBuffer;
+  document.getElementById("bufferInput").value = savedBuffer.toLocaleString("en-US");
+
+  // Reset to saved ground truth if one exists, otherwise original
+  if (savedGroundTruth) {
+    balanceOverride = { ...savedGroundTruth };
+    const dateStr = savedGroundTruth.date.toISOString().slice(0,10);
+    document.getElementById("balanceDate").value = dateStr;
+    document.getElementById("balanceAmount").value = Math.round(savedGroundTruth.amount).toLocaleString("en-US");
+  } else {
+    balanceOverride = null;
+    testOverride = null;
+    document.getElementById("balanceAmount").value = "";
+  }
+  document.getElementById("saveBtn").disabled = true;
+  refresh();
+  if (savedGroundTruth) updateBaselineBox();
+}
+
+function computePeriods() {
+  const paydays = buildPaydays();
+  const results = [];
+
+  // Two-pass approach:
+  // Pass 1: run the default scenario (DEFAULT_OVERRIDE) for ALL periods
+  // Pass 2: from the period AFTER the user override, replace balance with user's amount
+
+  const userOverride = balanceOverride || null;
+
+  // Build default periods using DEFAULT_OVERRIDE
+  // If no starting override exists, use 0
+  let balance = DEFAULT_OVERRIDE ? DEFAULT_OVERRIDE.amount : 0;
+  let defaultApplied = false;
+
+  // We need the default bills/income for every period regardless
+  const allPeriods = [];
+  for (let i = 0; i < paydays.length - 1; i++) {
+    const pd = paydays[i];
+    const nextPd = paydays[i+1];
+    if (pd.getFullYear() === 2027) break;
+
+    const days = daysBetween(pd, nextPd);
+    let totalIn = 0, totalBills = 0;
+    const periodBills = [];
+
+    // Default countFrom: DEFAULT_OVERRIDE applies to first period only
+    let countFrom = new Date(pd);
+    if (!defaultApplied && DEFAULT_OVERRIDE && DEFAULT_OVERRIDE.date.getTime() < nextPd.getTime()) {
+      defaultApplied = true;
+      countFrom = DEFAULT_OVERRIDE && DEFAULT_OVERRIDE.date.getTime() > pd.getTime() ? new Date(DEFAULT_OVERRIDE.date) : new Date(pd);
+    }
+
+    let cur = new Date(countFrom);
+    while (cur < nextPd) {
+      const inc      = incomeOnDate(cur);
+      const dayBills = billsOnDate(cur);
+      const billTotal = dayBills.reduce((s, b) => s + b.amt, 0);
+      totalIn    += inc;
+      totalBills += billTotal;
+      dayBills.forEach(b => periodBills.push({ ...b, dueDay: cur.getDate() }));
+      cur = new Date(cur.getTime() + 86400000);
+    }
+
+    const yourPay = Array.from({length: daysBetween(countFrom, nextPd)}, (_, k) => {
+      return incomeOnDate(new Date(countFrom.getTime() + k * 86400000));
+    }).reduce((s, v) => s + v, 0);
+
+    const partner = 0; // now part of incomeOnDate
+
+    const lumpSum    = Math.max(0, balance + totalIn - totalBills - BUFFER);
+    const endBalance = balance + totalIn - totalBills - lumpSum;
+
+    allPeriods.push({ pd, nextPd, days, balance, totalIn, totalBills,
+      yourPay, partner, lumpSum, endBalance, countFrom,
+      periodBills: periodBills.sort((a,b) => a.dueDay - b.dueDay) });
+
+    balance = endBalance;
+  }
+
+  // Now build final results — override kicks in only from the period AFTER override date
+  let userApplied = false;
+  let runningBalance = null; // will be set from allPeriods[0].balance until override kicks in
+
+  for (let i = 0; i < allPeriods.length; i++) {
+    const p = allPeriods[i];
+    const { pd, nextPd, days } = p;
+
+    const overrideInThisPeriod = userOverride && !userApplied &&
+      userOverride.date.getTime() >= pd.getTime() &&
+      userOverride.date.getTime() < nextPd.getTime();
+    const useUserBalance = userOverride && userApplied;
+
+    let totalIn    = p.totalIn;
+    let totalBills = p.totalBills;
+    let yourPay    = p.yourPay;
+    let partner    = p.partner;
+    let countFrom  = new Date(p.countFrom);
+    let periodBills = p.periodBills;
+    let isUpdatedPeriod = false;
+
+    // If user balance is active (period after override), recalculate from period start
+    if (useUserBalance) {
+      totalIn = 0; totalBills = 0; yourPay = 0; partner = 0;
+      const freshBills = [];
+      let cur = new Date(pd);
+      while (cur < nextPd) {
+        const inc      = incomeOnDate(cur);
+        const dayBills = billsOnDate(cur);
+        const billTotal = dayBills.reduce((s, b) => s + b.amt, 0);
+        totalIn    += inc;
+        totalBills += billTotal;
+        yourPay    += inc;
+        dayBills.forEach(b => freshBills.push({ ...b, dueDay: cur.getDate() }));
+        cur = new Date(cur.getTime() + 86400000);
+      }
+      countFrom   = new Date(pd);
+      periodBills = freshBills.sort((a,b) => a.dueDay - b.dueDay);
+      isUpdatedPeriod = true;
+    }
+
+    // Balance to use for this period
+    const bal = (runningBalance !== null) ? runningBalance : p.balance;
+    const lumpSum    = Math.max(0, bal + totalIn - totalBills - BUFFER);
+    const endBalance = bal + totalIn - totalBills - lumpSum;
+
+    results.push({
+      payday: pd, nextPayday: nextPd, start: bal,
+      yourPay, partner, totalIn, totalBills, lumpSum,
+      days, isUpdatedPeriod, countFrom, periodBills,
+    });
+
+    if (overrideInThisPeriod) {
+      // Count bills from override date to end of this period
+      let billsFromOverride = 0;
+      let cur2 = new Date(userOverride.date);
+      while (cur2.getTime() < nextPd.getTime()) {
+        billsFromOverride += billsOnDate(cur2).reduce((s, b) => s + b.amt, 0);
+        cur2 = new Date(cur2.getTime() + 86400000);
+      }
+      const userLump = Math.max(0, userOverride.amount - billsFromOverride - BUFFER);
+      runningBalance = userOverride.amount - billsFromOverride - userLump;
+      userApplied = true;
+    } else {
+      runningBalance = endBalance;
+    }
+  }
+  return results;
+}
+
+function renderSummary(periods) {
+  const totalSpendable = periods.reduce((s, p) => s + p.lumpSum, 0);
+  const avgSpendable = periods.filter(p => p.lumpSum > 0).reduce((s, p) => s + p.lumpSum, 0)
+    / periods.filter(p => p.lumpSum > 0).length;
+  const spendingPeriods = periods.filter(p => p.lumpSum > 0).length;
+
+  const grid = document.getElementById("summaryGrid");
+  grid.innerHTML = `
+    <div class="summary-card green">
+      <div class="label">Total spendable (May–Dec)</div>
+      <div class="value">${fmt(totalSpendable)}</div>
+      <div class="sub">after all bills + $1,000 buffer</div>
+    </div>
+    <div class="summary-card blue">
+      <div class="label">Avg pull-out per payday</div>
+      <div class="value">${fmt(Math.round(avgSpendable))}</div>
+      <div class="sub">on spending periods</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Spending periods</div>
+      <div class="value">${spendingPeriods} <span style="font-size:14px;font-weight:400;color:var(--text-muted)">of ${periods.length}</span></div>
+      <div class="sub">rest are bills-only periods</div>
+    </div>
+    <div class="summary-card amber">
+      <div class="label">Monthly bills</div>
+      <div class="value">~${fmt(8454)}</div>
+      <div class="sub">mortgage, loans, utilities</div>
+    </div>
+  `;
+}
+
+function downloadArchive(archivedPeriods) {
+  const rows = [["Payday","Period","Total In","Total Bills","Lump Sum","Don't Go Below","Saved Balance Date","Saved Balance Amount"]];
+  archivedPeriods.forEach(r => {
+    const endDate = new Date(r.nextPayday.getTime() - 86400000);
+    const range = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()} – ${MONTHS[endDate.getMonth()]} ${endDate.getDate()}`;
+    const paydayStr = r.payday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+    // Check if a saved balance falls within this period
+    let savedDate = "", savedAmount = "";
+    if (savedGroundTruth &&
+        savedGroundTruth.date.getTime() >= r.payday.getTime() &&
+        savedGroundTruth.date.getTime() < r.nextPayday.getTime()) {
+      savedDate = savedGroundTruth.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      savedAmount = Math.round(savedGroundTruth.amount);
+    }
+
+    rows.push([
+      paydayStr, range,
+      Math.round(r.totalIn),
+      Math.round(r.totalBills),
+      Math.round(r.lumpSum),
+      Math.ceil((r.totalBills + BUFFER) / 100) * 100,
+      savedDate,
+      savedAmount
+    ]);
+  });
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "archived_periods.csv";
+  a.click();
+}
+
+function renderPeriods(periods) {
+  const container = document.getElementById("periodsContainer");
+  container.innerHTML = "";
+  let currentMonth = null;
+  let monthDiv = null;
+
+  // Layout:
+  // - Top: current month + next 4 months
+  // - Bottom: previous month (faded)
+  // - Archived: anything older than previous month
+  const now = new Date();
+  const thisMonth  = new Date(now.getFullYear(), now.getMonth(), 1);
+  const prevMonth  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fwdLimit   = new Date(now.getFullYear(), now.getMonth() + 5, 1); // current + 4 more = 5 months ahead
+
+  const archived = periods.filter(r => r.payday < prevMonth);
+  const previous = periods.filter(r => r.payday >= prevMonth && r.payday < thisMonth);
+  const current  = periods.filter(r => r.payday >= thisMonth && r.payday < fwdLimit);
+
+  // Store archived for download
+  if (archived.length > 0) window._archivedPeriods = archived;
+
+  // Render current + next month first (top)
+  current.forEach((r, idx) => {
+    const m = r.payday.getMonth();
+    const y = r.payday.getFullYear();
+    const monthKey = `${y}-${m}`;
+
+    if (monthKey !== currentMonth) {
+      currentMonth = monthKey;
+      monthDiv = document.createElement("div");
+      monthDiv.className = "month-section";
+      monthDiv.innerHTML = `<div class="month-label">${FULL_MONTHS[m]} ${y}</div>`;
+      container.appendChild(monthDiv);
+    }
+
+    const isZero = r.lumpSum === 0;
+    const endDate = new Date(r.nextPayday.getTime() - 86400000);
+
+    const card = document.createElement("div");
+    card.className = "period-card" + (r.isUpdatedPeriod ? " updated-period" : "");
+
+    const dateRange = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()} – ${MONTHS[endDate.getMonth()]} ${endDate.getDate()}`;
+    const payDayStr = `${DAYS[r.payday.getDay()]}, ${FULL_MONTHS[r.payday.getMonth()]} ${ordinal(r.payday.getDate())}`;
+
+    const billRows = r.periodBills.map(b => `
+      <div class="bill-row">
+        <span class="bill-day">${ordinal(b.dueDay)}</span>
+        <span class="bill-name">${b.name}</span>
+        <span class="bill-amount">${fmt(b.amt)}</span>
+      </div>
+    `).join("");
+
+    const incomeParts = [];
+    if (r.yourPay > 0) incomeParts.push(`<span class="income-item">Your paycheck <strong>${fmt(r.yourPay)}</strong></span>`);
+    if (r.partner > 0) incomeParts.push(`<span class="income-item">Partner deposit <strong>${fmt(r.partner)}</strong></span>`);
+
+    card.innerHTML = `
+      <div class="period-summary">
+        <div class="period-date">
+          ${payDayStr}
+          <div class="sub">${dateRange}</div>
+        </div>
+        <div class="bills-col">
+          <div class="label">Don't go below</div>
+          <div class="amount" style="color:var(--red)">${fmt(Math.ceil((r.totalBills + BUFFER) / 100) * 100)}</div>
+        </div>
+        <div class="income-col">
+          <div class="label">Income</div>
+          <div class="amount">${fmt(r.totalIn)}</div>
+        </div>
+        <div class="bills-col">
+          <div class="label">Bills</div>
+          <div class="amount">${fmt(r.totalBills)}</div>
+        </div>
+        <div class="pullout-badge ${isZero ? "zero" : "available"}">
+          ${isZero ? "Bills only period" : fmt(Math.round(r.lumpSum * 100) / 100)}
+        </div>
+        <span class="chevron" style="position:absolute;bottom:10px;right:1.25rem;font-size:10px;">
+          Show Bills in Pay Period <span class="chevron-icon" style="font-size:13px;">⌄</span>
+        </span>
+      </div>
+      <div class="period-detail">
+        ${incomeParts.length > 0 ? `<div class="income-breakdown">
+          ${incomeParts.join('<span style="color:var(--green);opacity:0.4">·</span>')}
+          <span class="income-item" style="margin-left:auto">Total in: <strong>${fmt(r.totalIn)}</strong></span>
+        </div>` : `<div class="income-breakdown" style="background:var(--blue-bg);color:var(--blue)">
+          <span style="font-size:12px">Income &amp; bills before ${r.countFrom.toLocaleDateString("en-US",{month:"short",day:"numeric"})} already counted in your balance</span>
+        </div>`}
+        <div class="detail-header">
+          <span>Bills this period</span>
+          <span>Amount</span>
+        </div>
+        ${billRows}
+        <div class="bill-total-row">
+          <span class="total-label">Total bills</span>
+          <span class="total-amount">${fmt(r.totalBills)}</span>
+        </div>
+        ${isZero ? `<div class="period-cover-note">This period's income is fully used by bills. Your prior period surplus covers the gap — don't pull anything out.</div>` : ""}
+      </div>
+    `;
+
+    card.querySelector(".period-summary").addEventListener("click", () => {
+      card.classList.toggle("open");
+    });
+
+    monthDiv.appendChild(card);
+
+    // Inject test preview box if Test was hit and date is in this period
+    if (testOverride && !savedGroundTruth &&
+        testOverride.date.getTime() >= r.payday.getTime() &&
+        testOverride.date.getTime() < r.nextPayday.getTime()) {
+      const bwrap = document.createElement("div");
+      bwrap.id = "baselineBox";
+      bwrap.className = "baseline-box";
+      bwrap.innerHTML = `
+        <div class="baseline-card" id="baselineCard">
+          <div class="baseline-header" id="baselineHeader"></div>
+          <div class="baseline-row" id="baselineRow"></div>
+        </div>`;
+      monthDiv.appendChild(bwrap);
+      renderBaselineContent(testOverride, r, true);
+    }
+
+    // Inject saved balance box if savedGroundTruth is in this period
+    if (savedGroundTruth &&
+        savedGroundTruth.date.getTime() >= r.payday.getTime() &&
+        savedGroundTruth.date.getTime() < r.nextPayday.getTime()) {
+      const bwrap = document.createElement("div");
+      bwrap.id = "baselineBox";
+      bwrap.className = "baseline-box";
+      bwrap.innerHTML = `
+        <div class="baseline-card" id="baselineCard">
+          <div class="baseline-header" id="baselineHeader"></div>
+          <div class="baseline-row" id="baselineRow"></div>
+        </div>`;
+      monthDiv.appendChild(bwrap);
+      renderBaselineContent(savedGroundTruth, r, false);
+    }
+  });
+
+  // Render previous month at the bottom
+  if (previous.length > 0) {
+    const divider = document.createElement("div");
+    divider.style.cssText = "margin: 2rem 0 0.5rem; border-top: 0.5px solid var(--border); padding-top: 1.5rem;";
+    container.appendChild(divider);
+
+    let prevMonthDiv = null;
+    let prevMonthKey = null;
+
+    previous.forEach(r => {
+      const m = r.payday.getMonth();
+      const y = r.payday.getFullYear();
+      const monthKey = `${y}-${m}`;
+
+      if (monthKey !== prevMonthKey) {
+        prevMonthKey = monthKey;
+        prevMonthDiv = document.createElement("div");
+        prevMonthDiv.className = "month-section";
+        prevMonthDiv.innerHTML = `<div class="month-label" style="color:var(--text-hint);">${FULL_MONTHS[m]} ${y}</div>`;
+        container.appendChild(prevMonthDiv);
+      }
+
+      const isZero = r.lumpSum === 0;
+      const endDate = new Date(r.nextPayday.getTime() - 86400000);
+      const card = document.createElement("div");
+      card.className = "period-card";
+      card.style.opacity = "0.6";
+      const dateRange = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()} – ${MONTHS[endDate.getMonth()]} ${endDate.getDate()}`;
+      const payDayStr = `${DAYS[r.payday.getDay()]}, ${FULL_MONTHS[r.payday.getMonth()]} ${ordinal(r.payday.getDate())}`;
+      const billRows = r.periodBills.map(b => `
+        <div class="bill-row">
+          <span class="bill-day">${ordinal(b.dueDay)}</span>
+          <span class="bill-name">${b.name}</span>
+          <span class="bill-amount">${fmt(b.amt)}</span>
+        </div>`).join("");
+      const incomeParts = [];
+      if (r.yourPay > 0) incomeParts.push(`<span class="income-item">Your paycheck <strong>${fmt(r.yourPay)}</strong></span>`);
+      if (r.partner > 0) incomeParts.push(`<span class="income-item">Partner deposit <strong>${fmt(r.partner)}</strong></span>`);
+
+      card.innerHTML = `
+        <div class="period-summary">
+          <div class="period-date">${payDayStr}<div class="sub">${dateRange}</div></div>
+          <div class="bills-col"><div class="label">Don't go below</div><div class="amount" style="color:var(--red)">${fmt(Math.ceil((r.totalBills + BUFFER) / 100) * 100)}</div></div>
+          <div class="income-col"><div class="label">Income</div><div class="amount">${fmt(r.totalIn)}</div></div>
+          <div class="bills-col"><div class="label">Bills</div><div class="amount">${fmt(r.totalBills)}</div></div>
+          <div class="pullout-badge ${isZero ? "zero" : "available"}">${isZero ? "Bills only" : fmt(Math.round(r.lumpSum))}</div>
+          <span class="chevron">
+          <span style="font-size:11px;color:var(--text-hint);">Show Bills</span>
+          <span class="chevron-icon">⌄</span>
+        </span>
+        </div>
+        <div class="period-detail">
+          ${incomeParts.length > 0 ? `<div class="income-breakdown">${incomeParts.join('<span style="color:var(--green);opacity:0.4">·</span>')}<span class="income-item" style="margin-left:auto">Total in: <strong>${fmt(r.totalIn)}</strong></span></div>` : ""}
+          <div class="detail-header" style="display:grid;grid-template-columns:1fr auto;padding:8px 1.25rem;background:var(--bg);font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.06em;"><span>Bills this period</span><span>Amount</span></div>
+          ${billRows}
+          <div class="bill-total-row"><span class="total-label">Total bills</span><span class="total-amount">${fmt(r.totalBills)}</span></div>
+        </div>`;
+
+      card.querySelector(".period-summary").addEventListener("click", () => card.classList.toggle("open"));
+      prevMonthDiv.appendChild(card);
+    });
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b, i) => {
+    const tabs = ["budget","bills","income"];
+    b.classList.toggle("active", tabs[i] === tab);
+  });
+  document.querySelectorAll(".tab-panel").forEach(p => {
+    p.classList.toggle("active", p.id === `tab-${tab}`);
+  });
+  if (tab === "bills") renderBillsTable();
+  if (tab === "income") renderIncomeTable();
+}
+
+const FREQ_OPTIONS = [
+  { value: "weekly",         label: "Weekly" },
+  { value: "biweekly",       label: "Every other week" },
+  { value: "monthly",        label: "Monthly" },
+  { value: "bimonthly",      label: "Twice a month (1st & 15th)" },
+  { value: "quarterly_may",  label: "Quarterly (May/Aug/Nov)" },
+  { value: "quarterly_jun",  label: "Quarterly (Jun/Sep/Dec)" },
+  { value: "quarterly_jul",  label: "Quarterly (Jul/Oct/Jan)" },
+  { value: "annually",       label: "Annually" },
+  { value: "one_time",       label: "One-time" },
+];
+
+function renderBillsTable(keepOpen) {
+  const container = document.getElementById("billsBody");
+  const openPanels = new Set();
+  document.querySelectorAll("[id^='bill-expand-']").forEach(el => {
+    if (el.classList.contains("open")) openPanels.add(el.id);
+  });
+  container.innerHTML = "";
+  const now = new Date();
+  const sorted = BILLS.map((bill, idx) => ({ bill, idx }))
+    .sort((a, b) => {
+      const aExp = a.bill.endDate ? now > new Date(a.bill.endDate) : false;
+      const bExp = b.bill.endDate ? now > new Date(b.bill.endDate) : false;
+      if (aExp !== bExp) return aExp ? 1 : -1;
+      return a.bill.days[0] - b.bill.days[0];
+    });
+  sorted.filter(({ bill }) => !bill.hidden).forEach(({ bill, idx }) => container.appendChild(buildBillRow(bill, idx)));
+  const toOpen = keepOpen !== undefined ? new Set([`bill-expand-${keepOpen}`]) : openPanels;
+  toOpen.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("open");
+  });
+}
+
+function buildBillRow(bill, idx) {
+  const freqOpts = FREQ_OPTIONS.map(o =>
+    `<option value="${o.value}" ${bill.freq === o.value ? "selected" : ""}>${o.label}</option>`
+  ).join("");
+
+  const expandId = `bill-expand-${idx}`;
+  const menuId   = `bill-menu-${idx}`;
+  const amtPill  = `<span style="font-size:12px;font-weight:500;color:#0C447C;background:#E6F1FB;border-radius:20px;padding:3px 10px;border:0.5px solid #B5D4F4;">${fmt(bill.amt)}</span>`;
+
+  const now = new Date();
+  const billExpired = bill.endDate ? now > new Date(bill.endDate) : false;
+
+  const card = document.createElement("div");
+  card.className = "income-card" + (billExpired ? " expired" : "");
+  card.innerHTML = `
+    <div class="income-dots-wrap">
+      <button class="income-dots-btn" onclick="event.stopPropagation();document.getElementById('${menuId}').classList.toggle('open');" aria-label="Options">&#8942;</button>
+      <div class="income-dropdown" id="${menuId}">
+        ${billExpired
+          ? `<button onclick="toggleBillEdit(${idx})">Edit</button>
+             <button onclick="hideBill(${idx})" style="color:var(--text-muted);">Hide</button>`
+          : `<button onclick="deleteBill(${idx})">Delete</button>`}
+      </div>
+    </div>
+    <div class="income-row-main" style="grid-template-columns:1fr auto auto;cursor:pointer;"
+      onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='SELECT'&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
+      <div style="display:flex;align-items:center;">
+        <input class="income-source-name" value="${bill.name}" ${billExpired && !bill.editing ? 'readonly style="pointer-events:none;"' : `onchange="updateBill(${idx},'name',this.value)"`} onclick="event.stopPropagation()">
+        ${billExpired ? '<span class="expired-badge">Archived</span>' : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${amtPill}</div>
+      <span style="font-size:18px;color:var(--text-hint);line-height:1;padding:0 4px;">⌄</span>
+    </div>
+    <div class="income-expand" id="${expandId}">
+      <div style="${billExpired && !bill.editing ? 'pointer-events:none;opacity:0.65;' : ''}">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1rem;">
+        <div class="income-field">
+          <span class="income-field-label">Amount</span>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:12px;color:var(--text-muted);">$</span>
+            <input style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;"
+              type="text" inputmode="decimal"
+              value="${bill.amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}"
+              onchange="updateBill(${idx},'amt',parseFloat(this.value.replace(/,/g,'')))"
+              oninput="liveFormatAmount(this)">
+          </div>
+        </div>
+        <div class="income-field">
+          <span class="income-field-label">Due Day</span>
+          <select style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;"
+            onchange="updateBill(${idx},'day',parseInt(this.value))">
+            ${Array.from({length:31},(_,i)=>{const d=i+1;return `<option value="${d}" ${bill.days[0]===d?"selected":""}>${ordinal(d)}</option>`;}).join("")}
+          </select>
+        </div>
+        <div class="income-field">
+          <span class="income-field-label">Frequency</span>
+          <select style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;"
+            onchange="updateBill(${idx},'freq',this.value)">${freqOpts}</select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem;">
+        <div class="income-field">
+          <span class="income-field-label">Start Date</span>
+          <input style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;"
+            type="date" value="${bill.startDate||''}"
+            onchange="updateBill(${idx},'startDate',this.value)">
+        </div>
+        <div class="income-field">
+          <span class="income-field-label">End Date</span>
+          <input type="text" inputmode="none"
+            value="${bill.endDate||'Ongoing'}"
+            style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:${bill.endDate?'var(--text)':'var(--text-muted)'};width:100%;"
+            onfocus="this.type='date';this.value='${bill.endDate||''}';this.style.color='var(--text)';"
+            onblur="if(!this.value){updateBill(${idx},'endDate','');this.type='text';this.value='Ongoing';this.style.color='var(--text-muted)';} else {updateBill(${idx},'endDate',this.value);}"
+            onchange="updateBill(${idx},'endDate',this.value)">
+        </div>
+      </div>
+      </div>
+
+    </div>`;
+
+  document.addEventListener("click", () => {
+    const menu = document.getElementById(menuId);
+    if (menu) menu.classList.remove("open");
+  });
+
+  return card;
+}
+
+function updateBill(idx, field, value) {
+  if (field === "name")       BILLS[idx].name = value;
+  else if (field === "amt")       BILLS[idx].amt = isNaN(value) ? BILLS[idx].amt : value;
+  else if (field === "day")       BILLS[idx].days = [value];
+  else if (field === "startDate") BILLS[idx].startDate = value;
+  else if (field === "endDate")   BILLS[idx].endDate = value;
+  else if (field === "freq")      BILLS[idx].freq = value;
+  refresh();
+}
+
+function deleteBill(idx) {
+  BILLS.splice(idx, 1);
+  renderBillsTable();
+  refresh();
+}
+
+function hideBill(idx) {
+  BILLS[idx].hidden = true;
+  renderBillsTable();
+}
+
+function toggleBillEdit(idx) {
+  BILLS[idx].editing = !BILLS[idx].editing;
+  renderBillsTable(idx);
+  // Open the expand panel
+  const el = document.getElementById(`bill-expand-${idx}`);
+  if (el) el.classList.add("open");
+}
+
+function addBillRow() {
+  BILLS.push({ name: "New Bill", days: [1], amt: 0, freq: "monthly", startDate: "" });
+  renderBillsTable();
+  document.getElementById("billsBody").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ── Income data ──────────────────────────────────────────────────────────
+const INCOME_FREQ_OPTIONS = [
+  { value: "biweekly",    label: "Every other week" },
+  { value: "weekly",      label: "Weekly" },
+  { value: "monthly",     label: "Monthly (fixed day)" },
+  { value: "semimonthly", label: "Twice a month (1st & 15th)" },
+  { value: "one_time",    label: "One-time" },
+];
+
+// amounts = array of values that cycle in order each occurrence
+let INCOME_SOURCES = [];
+
+function incomeOnDate(dt) {
+  let total = 0;
+  INCOME_SOURCES.forEach(src => {
+    if (!src.startDate) return;
+    const [sy,sm,sd] = src.startDate.split("-").map(Number);
+    const start = new Date(sy, sm-1, sd);
+    if (dt < start) return;
+    if (isExpired(src, dt)) return;
+    const amts = src.amounts && src.amounts.length ? src.amounts : [0];
+    let occurrenceIndex = -1;
+
+    if (src.freq === "biweekly") {
+      const diff = Math.round((dt - start) / 86400000);
+      if (diff >= 0 && diff % 14 === 0) occurrenceIndex = Math.floor(diff / 14);
+    } else if (src.freq === "weekly") {
+      const diff = Math.round((dt - start) / 86400000);
+      if (diff >= 0 && diff % 7 === 0) occurrenceIndex = Math.floor(diff / 7);
+    } else if (src.freq === "monthly") {
+      const day = sd;
+      if (dt.getDate() === day) {
+        occurrenceIndex = (dt.getFullYear() - sy) * 12 + (dt.getMonth() + 1 - sm);
+      }
+    } else if (src.freq === "semimonthly") {
+      if (dt.getDate() === 1 || dt.getDate() === 15) occurrenceIndex = 1;
+    } else if (src.freq === "one_time") {
+      if (dt.getFullYear()===sy && dt.getMonth()+1===sm && dt.getDate()===sd) occurrenceIndex = 0;
+    }
+
+    if (occurrenceIndex >= 0) {
+      const seq = src.sequence && src.sequence.length ? src.sequence : amts.map((_,i) => i);
+      const seqIdx = occurrenceIndex % seq.length;
+      const amtIdx = seq[seqIdx];
+      total += amts[amtIdx] || 0;
+    }
+  });
+  return total;
+}
+
+function renderIncomeTable(keepOpen) {
+  const container = document.getElementById("incomeBody");
+  const openPanels = new Set();
+  document.querySelectorAll("[id^='income-expand-']").forEach(el => {
+    if (el.classList.contains("open")) openPanels.add(el.id);
+  });
+  container.innerHTML = "";
+  const now = new Date();
+  const sorted = INCOME_SOURCES.map((src, idx) => ({ src, idx }))
+    .sort((a, b) => {
+      const aExp = a.src.endDate ? now > new Date(a.src.endDate) : false;
+      const bExp = b.src.endDate ? now > new Date(b.src.endDate) : false;
+      return aExp !== bExp ? (aExp ? 1 : -1) : 0;
+    });
+  sorted.filter(({ src }) => !src.hidden).forEach(({ src, idx }) => container.appendChild(buildIncomeRow(src, idx)));
+  const toOpen = keepOpen !== undefined ? new Set([`income-expand-${keepOpen}`]) : openPanels;
+  toOpen.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("open");
+  });
+}
+
+function buildIncomeRow(src, idx) {
+  const amounts  = src.amounts  && src.amounts.length  ? src.amounts  : [0];
+  const amtNames = src.amtNames && src.amtNames.length ? src.amtNames : amounts.map((_,i) => `Amount ${String.fromCharCode(65+i)}`);
+  const sequence = src.sequence && src.sequence.length ? src.sequence : [0];
+  const freqOpts = INCOME_FREQ_OPTIONS.map(o =>
+    `<option value="${o.value}" ${src.freq === o.value ? "selected" : ""}>${o.label}</option>`
+  ).join("");
+
+  const hasPattern = amounts.length > 1;
+  const pills = amounts.map((a, ai) =>
+    `<span style="font-size:12px;font-weight:500;color:#0C447C;background:#E6F1FB;border-radius:20px;padding:3px 10px;border:0.5px solid #B5D4F4;">${fmt(a)}</span>`
+  ).join(" ");
+
+  const expandId = `income-expand-${idx}`;
+  const menuId   = `income-menu-${idx}`;
+
+  // Amount rows
+  const amtRows = amounts.map((amt, ai) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border);">
+      <input style="font-size:12px;font-weight:600;color:var(--text);border:none;background:transparent;outline:none;width:80px;border-bottom:1px solid transparent;"
+        value="${amtNames[ai]}" onchange="updateIncomeAmtName(${idx},${ai},this.value)"
+        onfocus="this.style.borderBottomColor='var(--border-strong)'" onblur="this.style.borderBottomColor='transparent'">
+      <span style="font-size:12px;color:var(--text-muted);">$</span>
+      <input style="font-size:13px;border:0.5px solid var(--border);border-radius:6px;padding:3px 8px;background:var(--surface);color:var(--text);outline:none;width:110px;"
+        type="text" inputmode="decimal"
+        value="${amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}"
+        onchange="updateIncomeAmt(${idx},${ai},parseFloat(this.value.replace(/,/g,'')))"
+        oninput="liveFormatAmount(this)"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+      ${amounts.length > 1 ? `<button onclick="removeIncomeAmt(${idx},${ai})" style="background:none;border:none;color:var(--text-hint);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>` : ""}
+    </div>`).join("");
+
+  // Flow steps
+  const flowSteps = sequence.map((amtIdx, si) => {
+    const seqOpts = amtNames.map((n, ni) =>
+      `<option value="${ni}" ${ni === amtIdx ? "selected" : ""}>${n}</option>`
+    ).join("");
+    const isLast = si === sequence.length - 1;
+    return `
+      <div style="display:flex;flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--text-hint);min-width:44px;">Step ${si+1}</span>
+          <select style="font-size:12px;font-weight:500;color:#0C447C;background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:8px;padding:5px 10px;cursor:pointer;"
+            onchange="updateIncomeSeq(${idx},${si},parseInt(this.value))">${seqOpts}</select>
+          <button onclick="removeIncomeSeq(${idx},${si})" style="background:none;border:none;color:var(--text-hint);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>
+        </div>
+        ${!isLast ? '<div style="margin-left:50px;padding:3px 0;"><span style="font-size:14px;color:var(--text-hint);">↓</span></div>' : ""}
+      </div>`;
+  }).join("");
+
+  const now = new Date();
+  const srcExpired = src.endDate ? now > new Date(src.endDate) : false;
+
+  const card = document.createElement("div");
+  card.className = "income-card" + (srcExpired ? " expired" : "");
+  card.innerHTML = `
+    <div class="income-dots-wrap">
+      <button class="income-dots-btn" onclick="event.stopPropagation();document.getElementById('${menuId}').classList.toggle('open');" aria-label="Options">&#8942;</button>
+      <div class="income-dropdown" id="${menuId}">
+        ${srcExpired
+          ? `<button onclick="toggleIncomeEdit(${idx})">Edit</button>
+             <button onclick="hideIncome(${idx})" style="color:var(--text-muted);">Hide</button>`
+          : `<button onclick="deleteIncome(${idx})">Delete</button>`}
+      </div>
+    </div>
+    <div class="income-row-main" style="grid-template-columns:1fr auto auto;cursor:pointer;"
+      onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='SELECT'&&event.target.tagName!=='BUTTON')document.getElementById('${expandId}').classList.toggle('open')">
+      <div style="display:flex;align-items:center;">
+        <input class="income-source-name" value="${src.source}" ${srcExpired && !src.editing ? 'readonly style="pointer-events:none;"' : `onchange="updateIncome(${idx},'source',this.value)"`} onclick="event.stopPropagation()">
+        ${srcExpired ? '<span class="expired-badge">Archived</span>' : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;">${pills}</div>
+      <span style="font-size:18px;color:var(--text-hint);line-height:1;padding:0 4px;">⌄</span>
+    </div>
+    <div class="income-expand" id="${expandId}">
+      <div style="${srcExpired && !src.editing ? 'pointer-events:none;opacity:0.65;' : ''}">
+      <div class="income-expand-grid">
+        <div class="income-field">
+          <span class="income-field-label">Frequency</span>
+          <select onchange="updateIncome(${idx},'freq',this.value)">${freqOpts}</select>
+        </div>
+        <div class="income-field">
+          <span class="income-field-label">Period</span>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:11px;color:var(--text-hint);min-width:32px;">From</span>
+              <input type="date" value="${src.startDate||''}" style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:var(--text);width:100%;" onchange="updateIncome(${idx},'startDate',this.value)">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:11px;color:var(--text-hint);min-width:32px;">To</span>
+              <input type="text" inputmode="none"
+                value="${src.endDate || 'Ongoing'}"
+                style="font-size:13px;border:0.5px solid var(--border-strong);border-radius:6px;padding:5px 8px;background:var(--surface);color:${src.endDate ? 'var(--text)' : 'var(--text-muted)'};width:100%;"
+                onfocus="this.type='date';this.value='${src.endDate||''}';this.style.color='var(--text)';"
+                onblur="if(!this.value){updateIncome(${idx},'endDate','');this.type='text';this.value='Ongoing';this.style.color='var(--text-muted)';} else {updateIncome(${idx},'endDate',this.value);}"
+                onchange="updateIncome(${idx},'endDate',this.value)">
+            </div>
+          </div>
+        </div>
+      </div>
+      <hr style="border:none;border-top:0.5px solid var(--border);margin:0 0 1.25rem;">
+      <div class="income-pattern-grid">
+        <div>
+          <div class="income-field-label" style="margin-bottom:8px;">Amounts</div>
+          ${amtRows}
+          <button onclick="addIncomeAmt(${idx})" style="font-size:12px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;margin-top:8px;">+ add amount</button>
+        </div>
+        <div>
+          <div class="income-field-label" style="margin-bottom:8px;">Pattern <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-hint);margin-left:4px;">repeats after last step</span></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;">${flowSteps}</div>
+          <div style="margin-left:50px;padding:3px 0;"><span style="font-size:14px;color:var(--text-hint);">↓</span></div>
+          <div style="margin-left:50px;font-size:10px;color:var(--text-hint);background:var(--surface);border:0.5px dashed var(--border-strong);border-radius:4px;padding:3px 8px;display:inline-block;">↩ repeat</div>
+          <button onclick="addIncomeSeq(${idx})" style="display:block;margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-muted);cursor:pointer;">+ add step</button>
+        </div>
+      </div>
+      </div>
+
+    </div>`;
+
+  // Close menu on outside click
+  document.addEventListener("click", () => {
+    const menu = document.getElementById(menuId);
+    if (menu) menu.classList.remove("open");
+  });
+
+  return card;
+}
+
+function toggleIncomeExpand(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle("open");
+}
+
+function toggleIncomeOngoing(idx) {
+  const src = INCOME_SOURCES[idx];
+  src.endDate = src.endDate ? "" : "2026-12-31";
+  renderIncomeTable();
+  refresh();
+}
+
+function updateIncome(idx, field, value) {
+  INCOME_SOURCES[idx][field] = value;
+  if (field === "freq") renderIncomeTable();
+  refresh();
+}
+
+function updateIncomeAmt(idx, ai, value) {
+  if (!isNaN(value)) {
+    INCOME_SOURCES[idx].amounts[ai] = value;
+    refresh();
+  }
+}
+
+function updateIncomeAmtName(idx, ai, value) {
+  if (!INCOME_SOURCES[idx].amtNames) INCOME_SOURCES[idx].amtNames = [];
+  INCOME_SOURCES[idx].amtNames[ai] = value;
+  renderIncomeTable(idx);
+}
+
+function addIncomeAmt(idx) {
+  const src = INCOME_SOURCES[idx];
+  const nextLetter = String.fromCharCode(65 + src.amounts.length);
+  src.amounts.push(0);
+  if (!src.amtNames) src.amtNames = [];
+  src.amtNames.push(`Amount ${nextLetter}`);
+  if (!src.sequence) src.sequence = [0];
+  src.sequence.push(src.amounts.length - 1);
+  renderIncomeTable(idx);
+  refresh();
+}
+
+function removeIncomeAmt(idx, ai) {
+  const src = INCOME_SOURCES[idx];
+  src.amounts.splice(ai, 1);
+  if (src.amtNames) src.amtNames.splice(ai, 1);
+  if (src.sequence) {
+    src.sequence = src.sequence.filter(s => s !== ai).map(s => s > ai ? s - 1 : s);
+  }
+  renderIncomeTable(idx);
+  refresh();
+}
+
+function addIncomeSeq(idx) {
+  if (!INCOME_SOURCES[idx].sequence) INCOME_SOURCES[idx].sequence = [0];
+  INCOME_SOURCES[idx].sequence.push(0);
+  renderIncomeTable(idx);
+}
+
+function removeIncomeSeq(idx, si) {
+  INCOME_SOURCES[idx].sequence.splice(si, 1);
+  renderIncomeTable(idx);
+}
+
+function updateIncomeSeq(idx, si, amtIdx) {
+  INCOME_SOURCES[idx].sequence[si] = amtIdx;
+  refresh();
+}
+
+function deleteIncome(idx) {
+  INCOME_SOURCES.splice(idx, 1);
+  renderIncomeTable();
+  refresh();
+}
+
+function hideIncome(idx) {
+  INCOME_SOURCES[idx].hidden = true;
+  renderIncomeTable();
+}
+
+function toggleIncomeEdit(idx) {
+  INCOME_SOURCES[idx].editing = !INCOME_SOURCES[idx].editing;
+  renderIncomeTable(idx);
+}
+
+function addIncomeRow() {
+  INCOME_SOURCES.push({ source: "New Income", freq: "biweekly", startDate: "2026-05-01", endDate: "",
+    amounts: [0], amtNames: ["Amount A"], sequence: [0] });
+  renderIncomeTable();
+  document.getElementById("incomeBody").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function refresh() {
+  const periods = computePeriods();
+  renderPeriods(periods);
+}
+
+refresh();
+</script>
+</body>
+</html>
