@@ -2132,9 +2132,21 @@ function updateIncome(idx, field, value) {
 }
 
 function updateIncomeAmt(idx, ai, value) {
-  if (!isNaN(value)) {
+  if (!isNaN(value) && value >= 0) {
     INCOME_SOURCES[idx].amounts[ai] = value;
-    renderIncomeTable(idx);
+    // Update pills in banner without full re-render
+    const card = document.getElementById(`income-expand-${idx}`)?.closest('.income-card');
+    if (card) {
+      const amounts = INCOME_SOURCES[idx].amounts;
+      const amtNames = INCOME_SOURCES[idx].amtNames || amounts.map((_,i) => `Amount ${String.fromCharCode(65+i)}`);
+      const hasPattern = amounts.length > 1;
+      const pillsEl = card.querySelector('.income-row-main > div:nth-child(2)');
+      if (pillsEl) {
+        pillsEl.innerHTML = amounts.map((a, i) =>
+          `<span style="font-size:12px;font-weight:500;color:#0C447C;background:#E6F1FB;border-radius:20px;padding:3px 10px;border:0.5px solid #B5D4F4;">${fmt(a)}</span>`
+        ).join(" ");
+      }
+    }
     refresh();
   }
 }
@@ -2142,7 +2154,15 @@ function updateIncomeAmt(idx, ai, value) {
 function updateIncomeAmtName(idx, ai, value) {
   if (!INCOME_SOURCES[idx].amtNames) INCOME_SOURCES[idx].amtNames = [];
   INCOME_SOURCES[idx].amtNames[ai] = value;
-  renderIncomeTable(idx);
+  // Update sequence dropdowns in-place without full re-render
+  const seqContainer = document.getElementById(`income-expand-${idx}`);
+  if (seqContainer) {
+    seqContainer.querySelectorAll('select').forEach(sel => {
+      Array.from(sel.options).forEach((opt, ni) => {
+        if (INCOME_SOURCES[idx].amtNames[ni]) opt.text = INCOME_SOURCES[idx].amtNames[ni];
+      });
+    });
+  }
 }
 
 function addIncomeAmt(idx) {
