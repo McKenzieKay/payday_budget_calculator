@@ -1100,6 +1100,7 @@ function saveBalance() {
   // Reset amount input
   const amtInput = document.getElementById("balanceAmount");
   if (amtInput) amtInput.value = "";
+  saveToStorage();
   updateBaselineBox();
   setTimeout(() => {
     const box = document.getElementById("baselineBox");
