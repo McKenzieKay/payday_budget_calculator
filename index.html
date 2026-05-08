@@ -1868,14 +1868,16 @@ function addBillRow() {
   BILLS.push({ name: "New Bill", days: [1], amt: 0, freq: "monthly", startDate: "" });
   const newIdx = BILLS.length - 1;
   renderBillsTable(newIdx);
-  // Auto-open the expand panel on the new card
-  setTimeout(() => {
+  const tryOpen = () => {
     const expandEl = document.getElementById(`bill-expand-${newIdx}`);
     if (expandEl) {
       expandEl.classList.add("open");
       expandEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, 50);
+  };
+  tryOpen();
+  setTimeout(tryOpen, 100);
+  setTimeout(tryOpen, 300);
 }
 
 // ── Income data ──────────────────────────────────────────────────────────
@@ -2198,13 +2200,17 @@ function addIncomeRow() {
     amounts: [0], amtNames: ["Amount A"], sequence: [0] });
   const newIdx = INCOME_SOURCES.length - 1;
   renderIncomeTable(newIdx);
-  setTimeout(() => {
+  // Try immediately and also with delay as fallback
+  const tryOpen = () => {
     const expandEl = document.getElementById(`income-expand-${newIdx}`);
     if (expandEl) {
       expandEl.classList.add("open");
       expandEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, 50);
+  };
+  tryOpen();
+  setTimeout(tryOpen, 100);
+  setTimeout(tryOpen, 300);
 }
 
 function refresh() {
@@ -2266,8 +2272,8 @@ function showWelcome() {
       <h2 style="font-size:20px;font-weight:500;color:var(--text);margin-bottom:0.5rem;">Welcome to Payday Budget Calculator</h2>
       <p style="font-size:14px;margin-bottom:2rem;">Add your income sources and bills to get started, then set your current balance.</p>
       <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-        <button onclick="switchTab('income');setTimeout(addIncomeRow,50);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #185fa5;background:#e6f1fb;color:#185fa5;cursor:pointer;font-weight:500;">Add Income →</button>
-        <button onclick="switchTab('bills');setTimeout(addBillRow,50);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #6c3483;background:#f0e6f6;color:#6c3483;cursor:pointer;font-weight:500;">Add Bills →</button>
+        <button onclick="switchTab('income');setTimeout(addIncomeRow,100);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #185fa5;background:#e6f1fb;color:#185fa5;cursor:pointer;font-weight:500;">Add Income →</button>
+        <button onclick="switchTab('bills');setTimeout(addBillRow,100);" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #6c3483;background:#f0e6f6;color:#6c3483;cursor:pointer;font-weight:500;">Add Bills →</button>
         <button onclick="document.getElementById('bufferInput').focus();document.getElementById('bufferInput').select();" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid var(--green-dark);background:var(--green-bg);color:var(--green-dark);cursor:pointer;font-weight:500;">Add Buffer →</button>
       </div>
     </div>`;
