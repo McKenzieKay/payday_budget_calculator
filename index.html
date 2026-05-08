@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payday Budget Tracker</title>
+<title>Payday Budget Calculator</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -158,14 +158,14 @@
     font-size: 13px;
     padding: 8px 16px;
     border-radius: var(--radius-sm);
-    border: 0.5px solid var(--blue);
-    background: var(--blue-bg);
-    color: var(--blue);
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
     cursor: pointer;
     font-weight: 500;
   }
 
-  .add-bill-btn:hover { background: var(--blue); color: #fff; }
+  .add-bill-btn:hover { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
 
   .bills-panel-wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
 
@@ -197,6 +197,18 @@
     opacity: 0.45;
   }
 
+  .income-card .income-chevron {
+    font-size: 18px;
+    color: var(--text-hint);
+    line-height: 1;
+    padding: 0 4px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+
+  .income-card .income-expand.open ~ * .income-chevron,
+  .income-card:has(.income-expand.open) .income-chevron { transform: rotate(180deg); }
+
   .expired-badge {
     font-size: 10px;
     color: var(--text-hint);
@@ -223,10 +235,9 @@
     background: transparent;
     outline: none;
     width: 100%;
-    border-bottom: 1px solid transparent;
   }
 
-  .income-source-name:focus { border-bottom-color: var(--border-strong); }
+  .income-source-name:focus { outline: none; }
 
   .income-dots-wrap { position: absolute; top: 8px; right: 10px; }
   .income-dots-btn { background: none; border: none; color: var(--text-hint); cursor: pointer; font-size: 18px; padding: 2px 4px; border-radius: 4px; line-height: 1; }
@@ -240,7 +251,7 @@
   .income-expand.open { display: block; }
   .income-expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
   .income-field { display: flex; flex-direction: column; gap: 5px; }
-  .income-field-label { font-size: 11px; font-weight: 600; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .income-field-label { font-size: 11px; font-weight: 600; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
   .income-field select, .income-field input[type=date] { font-size: 13px; border: 0.5px solid var(--border-strong); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--text); width: 100%; }
   .income-pattern-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
   .income-hdr { font-size: 11px; font-weight: 600; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; padding: 0 4px 0 16px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: center; }
@@ -354,7 +365,7 @@
 
   .period-summary {
     display: grid;
-    grid-template-columns: 1fr 130px 110px 110px auto;
+    grid-template-columns: 5fr 100px 80px 80px auto;
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.25rem 2rem 1.25rem;
@@ -373,23 +384,25 @@
 
   .period-date .sub {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--text-hint);
     font-weight: 400;
-    margin-top: 2px;
+    margin-top: 3px;
   }
 
   .income-col {
     text-align: right;
   }
 
-  .income-col .label {
-    font-size: 10px;
+  .income-col .label, .bills-col .label {
+    font-size: 11px;
     color: var(--text-hint);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 3px;
   }
 
-  .income-col .amount {
+  .income-col .amount, .bills-col .amount {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-muted);
@@ -397,19 +410,6 @@
 
   .bills-col {
     text-align: right;
-  }
-
-  .bills-col .label {
-    font-size: 10px;
-    color: var(--text-hint);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .bills-col .amount {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
   }
 
   .pullout-badge {
@@ -573,7 +573,7 @@
   .archive-btn:hover { background: var(--bg); }
 
   .balance-bar {
-    background: var(--blue-bg);
+    background: var(--surface);
     border-bottom: 0.5px solid var(--border);
     padding: 0.75rem 1.5rem;
     display: flex;
@@ -628,8 +628,8 @@
   }
 
   .balance-bar .save-btn {
-    background: #1a6ef5;
-    border-color: #1a6ef5;
+    background: var(--blue);
+    border-color: var(--blue);
     color: #fff;
   }
 
@@ -675,7 +675,7 @@
   .baseline-card {
     background: var(--surface);
     border: 0.5px solid var(--border);
-    border-left: 3px solid #9b59b6;
+    border-left: 3px solid #a3c900;
     border-radius: 0 var(--radius) var(--radius) 0;
     overflow: hidden;
   }
@@ -712,8 +712,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #f0e6f6;
-    color: #6c3483;
+    background: #e8ff4a;
+    color: #3a4d00;
   }
 
   .baseline-card.shortfall .baseline-header {
@@ -723,7 +723,7 @@
 
   .baseline-row {
     display: grid;
-    grid-template-columns: 1fr 130px 110px 110px auto;
+    grid-template-columns: 5fr 100px 80px 80px auto;
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.25rem;
@@ -747,7 +747,7 @@
 
 <header>
   <div>
-    <h1>Payday Budget Tracker</h1>
+    <h1>Payday Budget Calculator</h1>
   </div>
   <div class="header-stats" style="display:flex;align-items:center;">
     <div style="display:flex;align-items:center;height:30px;border:0.5px solid #000;border-radius:20px;overflow:hidden;">
@@ -766,16 +766,14 @@
 </header>
 
 <div class="balance-bar">
-  <label>Update Balance:</label>
+  <label>Update Balance</label>
   <input type="date" id="balanceDate">
   <div style="display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);height:32px;padding:0 8px;gap:2px;">
     <span style="font-size:13px;color:var(--text-muted);user-select:none;">$</span>
     <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)"
       style="width:120px;font-size:13px;border:none;background:transparent;color:var(--text);padding:0;outline:none;text-align:right;">
   </div>
-  <button onclick="applyBalanceUpdate()">Test</button>
-  <button class="reset-btn" onclick="resetBalance()">Reset</button>
-  <button class="save-btn" id="saveBtn" onclick="saveBalance()">Save New Balance</button>
+  <button class="save-btn" id="saveBtn" onclick="saveBalance()">Save Balance</button>
 </div>
 
 <div class="tab-bar">
@@ -793,7 +791,7 @@
 <div class="tab-panel" id="tab-bills">
   <div class="bills-panel-wrap">
     <div class="income-hdr" style="grid-template-columns:1fr auto auto;">
-      <span>Name</span>
+      <span>Bill Source</span>
       <span style="padding-right:1rem;">Amount</span>
       <span style="padding-right:42px;text-align:center;">Details</span>
     </div>
@@ -805,7 +803,7 @@
 <div class="tab-panel" id="tab-income">
   <div class="bills-panel-wrap">
     <div class="income-hdr" style="grid-template-columns:1fr auto auto;">
-      <span>Source</span>
+      <span>Income Source</span>
       <span style="padding-right:1rem;">Amount(s)</span>
       <span style="padding-right:42px;text-align:center;">Details</span>
     </div>
@@ -814,7 +812,15 @@
   </div>
 </div>
 
-<footer style="text-align:center;padding:1rem;font-size:11px;color:var(--text-hint);">v1.0.0</footer>
+<div id="savedToast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);font-size:12px;padding:8px 18px;border-radius:20px;z-index:9999;pointer-events:none;">Saved ✓</div>
+
+<footer style="text-align:center;padding:1rem;font-size:11px;color:var(--text-hint);display:flex;align-items:center;justify-content:center;gap:1.5rem;">
+  <span>v1.0.0</span>
+  <button onclick="handleDownloadArchive()"
+    style="font-size:11px;padding:4px 12px;border-radius:6px;border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text-muted);cursor:pointer;">
+    ↓ Download Archived Data
+  </button>
+</footer>
 
 <script>
 let BUFFER = 0;
@@ -1125,8 +1131,8 @@ function renderBaselineContent(overrideData, period, isTest) {
     card.className = "baseline-card" + (isShortfall ? " shortfall" : "");
   }
 
-  const accentColor = isTest ? "#3a4d00" : (isShortfall ? "var(--red)" : "#6c3483");
-  const accentBg    = isTest ? "#e8ff4a"  : (isShortfall ? "var(--red-bg)" : "#f0e6f6");
+  const accentColor = isTest ? "#3a4d00" : (isShortfall ? "var(--red)" : "#3a4d00");
+  const accentBg    = isTest ? "#e8ff4a"  : (isShortfall ? "var(--red-bg)" : "#e8ff4a");
 
   const menuId = "blMenu_" + Date.now();
   const actionBtn = isTest
@@ -1138,7 +1144,7 @@ function renderBaselineContent(overrideData, period, isTest) {
         </div>
       </div>`;
 
-  const titleLabel = isTest ? "Test Preview —" : "New Balance Saved —";
+  const titleLabel = isTest ? "Test Preview —" : "Balance Saved —";
   const icon = isTest ? "ti-flask" : (isShortfall ? "ti-circle-x" : "ti-circle-check");
 
   header.style.display = "none";
@@ -1158,8 +1164,8 @@ function renderBaselineContent(overrideData, period, isTest) {
   row.style.cursor = "pointer";
   row.onclick = toggleDetail;
 
-  const badgeBg = isTest ? "#e8ff4a" : isShortfall ? "var(--red-bg)" : "#f0e6f6";
-  const badgeFg = isTest ? "#3a4d00" : isShortfall ? "var(--red)" : "#6c3483";
+  const badgeBg = isTest ? "#e8ff4a" : isShortfall ? "var(--red-bg)" : "#e8ff4a";
+  const badgeFg = isTest ? "#3a4d00" : isShortfall ? "var(--red)" : "#3a4d00";
 
   row.innerHTML = `
     <div class="period-date">
@@ -1172,7 +1178,7 @@ function renderBaselineContent(overrideData, period, isTest) {
     </div>
     <div class="income-col">
       <div class="label">Balance ${isTest ? "entered" : "saved"}</div>
-      <div class="amount" style="color:${isTest ? "#3a4d00" : "#6c3483"}">${fmt(overrideData.amount)}</div>
+      <div class="amount" style="color:${isTest ? "#3a4d00" : "#3a4d00"}">${fmt(overrideData.amount)}</div>
     </div>
     <div class="bills-col">
       <div class="label">Bills remaining</div>
@@ -1272,7 +1278,7 @@ function computePeriods() {
   for (let i = 0; i < paydays.length - 1; i++) {
     const pd = paydays[i];
     const nextPd = paydays[i+1];
-    if (pd.getFullYear() === 2027) break;
+    if (pd.getFullYear() > new Date().getFullYear() + 1) break;
 
     const days = daysBetween(pd, nextPd);
     let totalIn = 0, totalBills = 0;
@@ -1413,6 +1419,14 @@ function renderSummary(periods) {
   `;
 }
 
+function handleDownloadArchive() {
+  if (!window._archivedPeriods || window._archivedPeriods.length === 0) {
+    alert("No archived periods yet. Periods older than one month will appear here.");
+    return;
+  }
+  downloadArchive(window._archivedPeriods);
+}
+
 function downloadArchive(archivedPeriods) {
   const rows = [["Payday","Period","Total In","Total Bills","Lump Sum","Don't Go Below","Saved Balance Date","Saved Balance Amount"]];
   archivedPeriods.forEach(r => {
@@ -1490,7 +1504,7 @@ function renderPeriods(periods) {
     card.className = "period-card" + (r.isUpdatedPeriod ? " updated-period" : "");
 
     const dateRange = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()} – ${MONTHS[endDate.getMonth()]} ${endDate.getDate()}`;
-    const payDayStr = `${DAYS[r.payday.getDay()]}, ${FULL_MONTHS[r.payday.getMonth()]} ${ordinal(r.payday.getDate())}`;
+    const payDayStr = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()}, ${r.payday.getFullYear()}`;
 
     const billRows = r.periodBills.map(b => `
       <div class="bill-row">
@@ -1616,7 +1630,7 @@ function renderPeriods(periods) {
       card.className = "period-card";
       card.style.opacity = "0.6";
       const dateRange = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()} – ${MONTHS[endDate.getMonth()]} ${endDate.getDate()}`;
-      const payDayStr = `${DAYS[r.payday.getDay()]}, ${FULL_MONTHS[r.payday.getMonth()]} ${ordinal(r.payday.getDate())}`;
+      const payDayStr = `${MONTHS[r.payday.getMonth()]} ${r.payday.getDate()}, ${r.payday.getFullYear()}`;
       const billRows = r.periodBills.map(b => `
         <div class="bill-row">
           <span class="bill-day">${ordinal(b.dueDay)}</span>
@@ -1730,7 +1744,7 @@ function buildBillRow(bill, idx) {
         ${billExpired ? '<span class="expired-badge">Archived</span>' : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${amtPill}</div>
-      <span style="font-size:18px;color:var(--text-hint);line-height:1;padding:0 4px;">⌄</span>
+      <span class="income-chevron">⌄</span>
     </div>
     <div class="income-expand" id="${expandId}">
       <div style="${billExpired && !bill.editing ? 'pointer-events:none;opacity:0.65;' : ''}">
@@ -1777,6 +1791,10 @@ function buildBillRow(bill, idx) {
         </div>
       </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;padding-top:10px;">
+        <button onclick="saveToStorage();showSavedToast()"
+          style="font-size:12px;padding:5px 16px;border-radius:6px;border:0.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;font-weight:500;">Save</button>
+      </div>
 
     </div>`;
 
@@ -1789,12 +1807,12 @@ function buildBillRow(bill, idx) {
 }
 
 function updateBill(idx, field, value) {
-  if (field === "name")       BILLS[idx].name = value;
-  else if (field === "amt")       BILLS[idx].amt = isNaN(value) ? BILLS[idx].amt : value;
-  else if (field === "day")       BILLS[idx].days = [value];
+  if (field === "name")           BILLS[idx].name = value;
+  else if (field === "amt")       { BILLS[idx].amt = isNaN(value) ? BILLS[idx].amt : value; renderBillsTable(idx); }
+  else if (field === "day")       { BILLS[idx].days = [value]; renderBillsTable(idx); }
   else if (field === "startDate") BILLS[idx].startDate = value;
-  else if (field === "endDate")   BILLS[idx].endDate = value;
-  else if (field === "freq")      BILLS[idx].freq = value;
+  else if (field === "endDate")   { BILLS[idx].endDate = value; renderBillsTable(idx); }
+  else if (field === "freq")      { BILLS[idx].freq = value; renderBillsTable(idx); }
   refresh();
 }
 
@@ -1967,7 +1985,7 @@ function buildIncomeRow(src, idx) {
         ${srcExpired ? '<span class="expired-badge">Archived</span>' : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;">${pills}</div>
-      <span style="font-size:18px;color:var(--text-hint);line-height:1;padding:0 4px;">⌄</span>
+      <span class="income-chevron">⌄</span>
     </div>
     <div class="income-expand" id="${expandId}">
       <div style="${srcExpired && !src.editing ? 'pointer-events:none;opacity:0.65;' : ''}">
@@ -2011,6 +2029,10 @@ function buildIncomeRow(src, idx) {
         </div>
       </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;padding-top:10px;">
+        <button onclick="saveToStorage();showSavedToast()"
+          style="font-size:12px;padding:5px 16px;border-radius:6px;border:0.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;font-weight:500;">Save</button>
+      </div>
 
     </div>`;
 
@@ -2030,20 +2052,22 @@ function toggleIncomeExpand(id) {
 
 function toggleIncomeOngoing(idx) {
   const src = INCOME_SOURCES[idx];
-  src.endDate = src.endDate ? "" : "2026-12-31";
+  const ted = new Date(); ted.setFullYear(ted.getFullYear() + 1);
+  src.endDate = src.endDate ? "" : `${ted.getFullYear()}-${String(ted.getMonth()+1).padStart(2,"0")}-${String(ted.getDate()).padStart(2,"0")}`;
   renderIncomeTable();
   refresh();
 }
 
 function updateIncome(idx, field, value) {
   INCOME_SOURCES[idx][field] = value;
-  if (field === "freq") renderIncomeTable();
+  if (["freq","endDate","startDate"].includes(field)) renderIncomeTable(idx);
   refresh();
 }
 
 function updateIncomeAmt(idx, ai, value) {
   if (!isNaN(value)) {
     INCOME_SOURCES[idx].amounts[ai] = value;
+    renderIncomeTable(idx);
     refresh();
   }
 }
@@ -2110,7 +2134,8 @@ function toggleIncomeEdit(idx) {
 }
 
 function addIncomeRow() {
-  INCOME_SOURCES.push({ source: "New Income", freq: "biweekly", startDate: "2026-05-01", endDate: "",
+  const td = new Date(); const tds = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,"0")}-${String(td.getDate()).padStart(2,"0")}`;
+  INCOME_SOURCES.push({ source: "New Income", freq: "biweekly", startDate: tds, endDate: "",
     amounts: [0], amtNames: ["Amount A"], sequence: [0] });
   renderIncomeTable();
   document.getElementById("incomeBody").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -2121,7 +2146,86 @@ function refresh() {
   renderPeriods(periods);
 }
 
+// ── localStorage persistence ──────────────────────────────────────────────
+const LS_KEY = "payday_budget_v1";
+
+function showSavedToast() {
+  const t = document.getElementById("savedToast");
+  if (!t) return;
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = "none", 2000);
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      BILLS, INCOME_SOURCES, BUFFER,
+      savedGroundTruth: savedGroundTruth
+        ? { date: savedGroundTruth.date.toISOString(), amount: savedGroundTruth.amount }
+        : null,
+    }));
+  } catch(e) { console.warn("Could not save:", e); }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.BILLS))          BILLS = data.BILLS;
+    if (Array.isArray(data.INCOME_SOURCES)) INCOME_SOURCES = data.INCOME_SOURCES;
+    if (typeof data.BUFFER === "number") {
+      BUFFER = data.BUFFER;
+      const inp = document.getElementById("bufferInput");
+      if (inp) inp.value = BUFFER.toLocaleString("en-US");
+    }
+    if (data.savedGroundTruth) {
+      savedGroundTruth = {
+        date: new Date(data.savedGroundTruth.date),
+        amount: data.savedGroundTruth.amount
+      };
+      balanceOverride = { ...savedGroundTruth };
+    }
+    return true;
+  } catch(e) { console.warn("Could not load:", e); return false; }
+}
+
+function showWelcome() {
+  const container = document.getElementById("periodsContainer");
+  if (!container) return;
+  container.innerHTML = `
+    <div style="text-align:center;padding:4rem 2rem;color:var(--text-muted);">
+      <div style="font-size:48px;margin-bottom:1rem;">💰</div>
+      <h2 style="font-size:20px;font-weight:500;color:var(--text);margin-bottom:0.5rem;">Welcome to Payday Budget Calculator</h2>
+      <p style="font-size:14px;margin-bottom:2rem;">Add your income sources and bills to get started, then set your current balance.</p>
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+        <button onclick="switchTab('income')" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #185fa5;background:#e6f1fb;color:#185fa5;cursor:pointer;font-weight:500;">Add Income →</button>
+        <button onclick="switchTab('bills')" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid #6c3483;background:#f0e6f6;color:#6c3483;cursor:pointer;font-weight:500;">Add Bills →</button>
+        <button onclick="document.getElementById('bufferInput').focus();document.getElementById('bufferInput').select();" style="font-size:13px;padding:10px 20px;border-radius:8px;border:0.5px solid var(--green-dark);background:var(--green-bg);color:var(--green-dark);cursor:pointer;font-weight:500;">Add Buffer →</button>
+      </div>
+    </div>`;
+}
+
+// Init date picker to today
+(function initDatePicker() {
+  const el = document.getElementById("balanceDate");
+  if (!el) return;
+  const t = new Date();
+  const y = t.getFullYear();
+  const m = String(t.getMonth()+1).padStart(2,"0");
+  const d = String(t.getDate()).padStart(2,"0");
+  el.value = `${y}-${m}-${d}`;
+  el.min = `${y}-01-01`;
+  el.max = `${y+2}-12-31`;
+})();
+
+// Load saved data then render
+const _hasData = loadFromStorage();
 refresh();
+if (!_hasData && BILLS.length === 0 && INCOME_SOURCES.length === 0) {
+  showWelcome();
+}
 </script>
 </body>
 </html>
