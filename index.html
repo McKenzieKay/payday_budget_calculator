@@ -1709,7 +1709,7 @@ function renderBillsTable(keepOpen) {
       const aExp = a.bill.endDate ? now > new Date(a.bill.endDate) : false;
       const bExp = b.bill.endDate ? now > new Date(b.bill.endDate) : false;
       if (aExp !== bExp) return aExp ? 1 : -1;
-      return a.bill.days[0] - b.bill.days[0];
+      return 0;
     });
   sorted.filter(({ bill }) => !bill.hidden).forEach(({ bill, idx }) => container.appendChild(buildBillRow(bill, idx)));
   const toOpen = keepOpen !== undefined ? new Set([`bill-expand-${keepOpen}`]) : openPanels;
@@ -1942,7 +1942,8 @@ function renderIncomeTable(keepOpen) {
     .sort((a, b) => {
       const aExp = a.src.endDate ? now > new Date(a.src.endDate) : false;
       const bExp = b.src.endDate ? now > new Date(b.src.endDate) : false;
-      return aExp !== bExp ? (aExp ? 1 : -1) : 0;
+      if (aExp !== bExp) return aExp ? 1 : -1;
+      return 0;
     });
   sorted.filter(({ src }) => !src.hidden).forEach(({ src, idx }) => container.appendChild(buildIncomeRow(src, idx)));
   const toOpen = keepOpen !== undefined ? new Set([`income-expand-${keepOpen}`]) : openPanels;
