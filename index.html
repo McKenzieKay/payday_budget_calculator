@@ -883,8 +883,9 @@ function billsOnDate(dt) {
       const startMonth = parseInt(b.startDate.split("-")[1]);
       return m === startMonth;
     }
+    if (b.freq === "bimonthly") return d === 1 || d === 15;
     if (!b.days.includes(d)) return false;
-    if (b.freq === "monthly" || b.freq === "bimonthly") return true;
+    if (b.freq === "monthly") return true;
     if (b.freq === "quarterly") {
       if (!b.startDate) return false;
       const [sy, sm, sd] = b.startDate.split("-").map(Number);
