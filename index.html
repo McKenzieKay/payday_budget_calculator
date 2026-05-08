@@ -1984,8 +1984,8 @@ function buildIncomeRow(src, idx) {
       <input style="font-size:13px;border:0.5px solid var(--border);border-radius:6px;padding:3px 8px;background:var(--surface);color:var(--text);outline:none;width:110px;"
         type="text" inputmode="decimal"
         value="${amt.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}"
+        oninput="liveFormatAmount(this);updateIncomeAmt(${idx},${ai},parseFloat(this.value.replace(/,/g,'')))"
         onchange="updateIncomeAmt(${idx},${ai},parseFloat(this.value.replace(/,/g,'')))"
-        oninput="liveFormatAmount(this)"
         onfocus="if(parseFloat(this.value.replace(/,/g,''))===0)this.value='';this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
       ${amounts.length > 1 ? `<button onclick="removeIncomeAmt(${idx},${ai})" style="background:none;border:none;color:var(--text-hint);cursor:pointer;font-size:13px;padding:0 4px;">✕</button>` : ""}
     </div>`).join("");
