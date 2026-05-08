@@ -885,6 +885,13 @@ function billsOnDate(dt) {
     }
     if (!b.days.includes(d)) return false;
     if (b.freq === "monthly" || b.freq === "bimonthly") return true;
+    if (b.freq === "quarterly") {
+      if (!b.startDate) return false;
+      const [sy, sm, sd] = b.startDate.split("-").map(Number);
+      if (dt.getDate() !== b.days[0]) return false;
+      const monthsDiff = (dt.getFullYear() - sy) * 12 + (dt.getMonth() + 1 - sm);
+      return monthsDiff >= 0 && monthsDiff % 3 === 0;
+    }
     if (b.freq === "quarterly_may") return [5,8,11].includes(m);
     if (b.freq === "quarterly_jun") return [6,9,12].includes(m);
     if (b.freq === "quarterly_jul") return [7,10,1].includes(m);
@@ -1689,9 +1696,7 @@ const FREQ_OPTIONS = [
   { value: "biweekly",       label: "Every other week" },
   { value: "monthly",        label: "Monthly" },
   { value: "bimonthly",      label: "Twice a month (1st & 15th)" },
-  { value: "quarterly_may",  label: "Quarterly (May/Aug/Nov)" },
-  { value: "quarterly_jun",  label: "Quarterly (Jun/Sep/Dec)" },
-  { value: "quarterly_jul",  label: "Quarterly (Jul/Oct/Jan)" },
+  { value: "quarterly",      label: "Quarterly" },
   { value: "annually",       label: "Annually" },
   { value: "one_time",       label: "One-time" },
 ];
@@ -2246,7 +2251,14 @@ function loadFromStorage() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    if (Array.isArray(data.BILLS))          BILLS = data.BILLS;
+    if (Array.isArray(data.BILLS)) {
+      BILLS = data.BILLS.map(b => {
+        if (['quarterly_may','quarterly_jun','quarterly_jul'].includes(b.freq)) {
+          return { ...b, freq: 'quarterly' };
+        }
+        return b;
+      });
+    }
     if (Array.isArray(data.INCOME_SOURCES)) INCOME_SOURCES = data.INCOME_SOURCES;
     if (typeof data.BUFFER === "number") {
       BUFFER = data.BUFFER;
