@@ -1758,9 +1758,10 @@ function renderPeriods(periods) {
     container.appendChild(emptyCard);
   }
 
-  // Render first saved balance as standalone chartreuse card at the very top — only while still current
-  const firstBalancePeriod = current.find(r => r.isFirstBalance);
-  if (firstBalancePeriod && firstBalancePeriod.savedEntries && firstBalancePeriod.savedEntries.length > 0) {
+  // Render first saved balance as standalone card at top — only while its period is still active
+  const firstBalancePeriod = [...current, ...previous].find(r => r.isFirstBalance);
+  const firstBalanceIsCurrent = current.some(r => r.isFirstBalance);
+  if (firstBalanceIsCurrent && firstBalancePeriod && firstBalancePeriod.savedEntries && firstBalancePeriod.savedEntries.length > 0) {
     const entry = firstBalancePeriod.savedEntries[firstBalancePeriod.savedEntries.length - 1];
     const bwrap = document.createElement("div");
     bwrap.className = "baseline-box";
@@ -1933,7 +1934,7 @@ function renderPeriods(periods) {
     }
   });
 
-  // Render past periods at the bottom (skip any pre-balance periods)
+  // Render past periods at the bottom (skip any pre-balance periods; isFirstBalance renders as greyed baseline card)
   const renderablePrevious = previous.filter(r => {
     if (sortedSavedFirst && r.nextPayday.getTime() <= sortedSavedFirst.getTime()) return false;
     return true;
@@ -1957,6 +1958,22 @@ function renderPeriods(periods) {
         prevMonthDiv.className = "month-section";
         prevMonthDiv.innerHTML = `<div class="month-label" style="color:var(--text-hint);">${FULL_MONTHS[m]} ${y}</div>`;
         container.appendChild(prevMonthDiv);
+      }
+
+      // First balance period in past: render as greyed-out baseline card
+      if (r.isFirstBalance && r.savedEntries && r.savedEntries.length > 0) {
+        const entry = r.savedEntries[r.savedEntries.length - 1];
+        const bwrap = document.createElement("div");
+        bwrap.className = "baseline-box";
+        bwrap.style.opacity = "0.6";
+        bwrap.innerHTML = `
+          <div class="baseline-card" id="baselineCard-first-past">
+            <div class="baseline-header" id="baselineHeader-first-past"></div>
+            <div class="baseline-row" id="baselineRow-first-past"></div>
+          </div>`;
+        prevMonthDiv.appendChild(bwrap);
+        renderBaselineContent(entry, r, "first-past");
+        return;
       }
 
       const prevFwdNet  = r.fwdNet !== undefined ? r.fwdNet : (r.totalIn - r.totalBills - BUFFER);
@@ -2167,7 +2184,7 @@ function buildBillRow(bill, idx) {
       <span class="income-chevron">⌄</span>
       <div style="display:flex;align-items:center;">
         <input class="income-source-name" value="${escHtml(bill.name)}" ${billExpired && !bill.editing ? 'readonly style="pointer-events:none;"' : `oninput="updateBillName(${idx},this.value)" onfocus="if(this.value==='New Expense')this.value=''" onblur="if(!this.value){this.value='New Expense';updateBillName(${idx},'New Expense');}" onkeydown="if(event.key==='Enter')this.blur()" onclick="event.stopPropagation();"`} style="cursor:text;">
-        ${billExpired ? '<div class="badge-wrap"><div class="badge-tip">Ended — no longer factored into projections</div><span class="expired-badge">Archived</span></div>' : ''}
+        ${billExpired ? `<div class="badge-wrap"><div class="badge-tip">Ended — no longer factored into projections</div><span class="expired-badge">Archived</span></div><button onclick="event.stopPropagation();restoreBill(${idx})" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #B1AC37;background:transparent;color:#B1AC37;cursor:pointer;font-weight:500;margin-left:6px;">Restore</button>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${amtPill}</div>
       <div class="income-dots-wrap">
@@ -2259,6 +2276,20 @@ function updateBillName(idx, value) {
 function deleteBill(idx) {
   BILLS.splice(idx, 1);
   renderBillsTable();
+  refresh();
+}
+
+function restoreBill(idx) {
+  BILLS[idx].endDate = '';
+  saveToStorage();
+  renderBillsTable(idx);
+  refresh();
+}
+
+function restoreIncome(idx) {
+  INCOME_SOURCES[idx].endDate = '';
+  saveToStorage();
+  renderIncomeTable(idx);
   refresh();
 }
 
@@ -2440,7 +2471,7 @@ function buildIncomeRow(src, idx) {
       <span class="income-chevron">⌄</span>
       <div style="display:flex;align-items:center;gap:10px;">
         <input class="income-source-name" value="${escHtml(src.source)}" ${srcExpired && !src.editing ? 'readonly style="pointer-events:none;"' : `readonly ondblclick="this.removeAttribute('readonly');if(this.value==='New Income')this.value='';this.focus();event.stopPropagation();" onchange="updateIncome(${idx},'source',this.value)" onblur="if(!this.value)this.value='New Income';this.setAttribute('readonly',true)" onkeydown="if(event.key==='Enter')this.blur()"`} style="cursor:pointer;">
-        ${srcExpired ? '<div class="badge-wrap"><div class="badge-tip">Ended — no longer factored into projections</div><span class="expired-badge">Archived</span></div>' : ''}
+        ${srcExpired ? `<div class="badge-wrap"><div class="badge-tip">Ended — no longer factored into projections</div><span class="expired-badge">Archived</span></div><button onclick="event.stopPropagation();restoreIncome(${idx})" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #B1AC37;background:transparent;color:#B1AC37;cursor:pointer;font-weight:500;margin-left:6px;">Restore</button>` : ''}
         <div class="badge-wrap" onclick="event.stopPropagation()"><div class="badge-tip" style="white-space:normal;width:220px;">If checked, pay dates from this source set your budget periods</div><label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;font-size:11px;color:var(--text-hint);font-weight:500;">
           <input type="checkbox" ${src.isPeriodDriver ? 'checked' : ''} onchange="updateIncome(${idx},'isPeriodDriver',this.checked);refresh();" onclick="event.stopPropagation();" style="accent-color:var(--blue);width:14px;height:14px;">
           Pay Period
