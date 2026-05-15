@@ -1758,8 +1758,8 @@ function renderPeriods(periods) {
     container.appendChild(emptyCard);
   }
 
-  // Render first saved balance as standalone chartreuse card at the very top
-  const firstBalancePeriod = [...current, ...previous].find(r => r.isFirstBalance);
+  // Render first saved balance as standalone chartreuse card at the very top — only while still current
+  const firstBalancePeriod = current.find(r => r.isFirstBalance);
   if (firstBalancePeriod && firstBalancePeriod.savedEntries && firstBalancePeriod.savedEntries.length > 0) {
     const entry = firstBalancePeriod.savedEntries[firstBalancePeriod.savedEntries.length - 1];
     const bwrap = document.createElement("div");
@@ -1933,9 +1933,8 @@ function renderPeriods(periods) {
     }
   });
 
-  // Render past periods at the bottom (skip the starting balance period and any pre-balance periods)
+  // Render past periods at the bottom (skip any pre-balance periods)
   const renderablePrevious = previous.filter(r => {
-    if (r.isFirstBalance) return false;
     if (sortedSavedFirst && r.nextPayday.getTime() <= sortedSavedFirst.getTime()) return false;
     return true;
   });
