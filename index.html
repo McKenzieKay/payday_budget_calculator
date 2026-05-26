@@ -1038,6 +1038,7 @@ const today = new Date();
 
 // Saved balances — array of { date: Date, amount: number }, sorted by date
 let savedBalances = [];
+let startingBalanceDate = null; // ISO date string — set once, never overwritten
 
 // Welcome screen visibility — flips to true once user clicks Add Income or Add Expenses on welcome
 let welcomeDismissed = false;
@@ -1127,6 +1128,11 @@ function saveBalance() {
   savedBalances.push(newEntry);
   savedBalances.sort((a, b) => a.date - b.date);
 
+  // Mark the very first balance ever entered as the starting balance
+  if (!startingBalanceDate) {
+    startingBalanceDate = newEntry.date.toISOString().slice(0, 10);
+  }
+
   // Reset input
   const amtInput = document.getElementById("balanceAmount");
   if (amtInput) amtInput.value = "";
@@ -1204,16 +1210,23 @@ function saveStartingBalanceFromModal() {
   savedBalances = savedBalances.filter(b => b.date.toDateString() !== newEntry.date.toDateString());
   savedBalances.push(newEntry);
   savedBalances.sort((a, b) => a.date - b.date);
-  saveToStorage();
+  if (!startingBalanceDate) {
+    startingBalanceDate = newEntry.date.toISOString().slice(0, 10);
+  }
   closeStartingBalanceModal();
   refresh();
 }
 
 function deleteBaseline(dateStr) {
   if (dateStr) {
-    savedBalances = savedBalances.filter(b => b.date.toDateString() !== new Date(dateStr).toDateString());
+    const deletedDate = new Date(dateStr);
+    if (startingBalanceDate && deletedDate.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString()) {
+      startingBalanceDate = null;
+    }
+    savedBalances = savedBalances.filter(b => b.date.toDateString() !== deletedDate.toDateString());
   } else {
     savedBalances = [];
+    startingBalanceDate = null;
   }
   saveToStorage();
   refresh();
@@ -1300,8 +1313,9 @@ function renderBaselineContent(overrideData, period, idSuffix) {
 
   card.className = "baseline-card" + (isShortfall ? " shortfall" : "");
 
-  // Starting balance gets bright blue stripe; otherwise state-based stripe matching badge color
-  const isStartingBalance = period && period.isFirstBalance;
+  // Starting balance is explicitly flagged, not determined by chronological order
+  const isStartingBalance = startingBalanceDate &&
+    overrideData.date.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString();
   const stripeColor = isStartingBalance ? "#0066ff"   // bright blue — starting balance
                     : isStaleSrc        ? "#B42457"   // red — "Additional Funds Needed"
                     : isAmberCard       ? "#E26728"   // amber — "Buffer Being Used"
@@ -2667,6 +2681,7 @@ function saveToStorage() {
       welcomeDismissed,
       bufferCalloutDismissed,
       tooltipsEnabled,
+      startingBalanceDate,
     }));
   } catch(e) { console.warn("Could not save:", e); }
 }
@@ -2716,6 +2731,13 @@ function loadFromStorage() {
     }
     if (typeof data.tooltipsEnabled === "boolean") {
       tooltipsEnabled = data.tooltipsEnabled;
+    }
+    if (typeof data.startingBalanceDate === "string") {
+      startingBalanceDate = data.startingBalanceDate;
+    } else if (savedBalances.length > 0) {
+      // Migration: infer from earliest saved balance
+      const earliest = [...savedBalances].sort((a, b) => a.date - b.date)[0];
+      startingBalanceDate = earliest.date.toISOString().slice(0, 10);
     }
     return true;
   } catch(e) { console.warn("Could not load:", e); return false; }
