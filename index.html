@@ -1293,17 +1293,22 @@ function renderBaselineContent(overrideData, period, idSuffix) {
     }
   }
 
-  // Use the period's forward-looking lump sum if available, otherwise fall back to simple calc
-  // Use manual values for subsequent balance periods (saved-amount-based)
-  // Use cascade-based values for first balance period (already saved-amount-based)
-  const fwdNet      = period && period.manualFwdNet !== undefined ? period.manualFwdNet
+  // Look up this specific entry's own projection so it's independent of later balances
+  const myProj = period && period.entryProjections
+    ? period.entryProjections.find(p => new Date(p.date).toDateString() === overrideData.date.toDateString())
+    : null;
+
+  const fwdNet      = myProj ? myProj.fwdNet
+                    : period && period.manualFwdNet !== undefined ? period.manualFwdNet
                     : period && period.fwdNet !== undefined ? period.fwdNet
                     : (overrideData.amount - billsRemaining - BUFFER);
-  const maxAvailC   = period && period.manualMaxAvail !== undefined ? period.manualMaxAvail
+  const maxAvailC   = myProj ? myProj.maxAvail
+                    : period && period.manualMaxAvail !== undefined ? period.manualMaxAvail
                     : period ? (overrideData.amount + period.totalIn - period.totalBills - BUFFER)
                     : (overrideData.amount - billsRemaining - BUFFER);
   const effNetCard  = Math.min(fwdNet, maxAvailC);
-  const lumpSum     = period && period.manualLumpSum !== undefined ? Math.round(period.manualLumpSum)
+  const lumpSum     = myProj ? Math.round(myProj.lumpSum)
+                    : period && period.manualLumpSum !== undefined ? Math.round(period.manualLumpSum)
                     : period && period.lumpSum !== undefined ? Math.round(period.lumpSum)
                     : Math.max(0, overrideData.amount - billsRemaining - BUFFER);
   const isShortfall = effNetCard < -50;
@@ -1589,6 +1594,31 @@ function computePeriods() {
       manualEndBalance = Math.max(0, entry.amount + manualTotals.totalIn - manualTotals.totalBills - manualLumpSum);
     }
 
+    // Per-entry projections — each balance card computes its own forward outlook
+    // from its own amount/date, independent of any balance entered later
+    const entryProjections = savedInPeriod.map(entry => {
+      const eCountFrom = new Date(entry.date.getTime() + 86400000);
+      const eTotals = sumRange(eCountFrom, nextPd);
+      let eCum = eTotals.totalIn - eTotals.totalBills;
+      let eMinCum = eCum;
+      for (let fw = 1; fw <= lookaheadPeriods && i + fw < periods.length; fw++) {
+        const fp = periods[i + fw];
+        const fpData = sumRange(fp.pd, fp.nextPd);
+        eCum += fpData.totalIn - fpData.totalBills;
+        eMinCum = Math.min(eMinCum, eCum);
+      }
+      const eFwdNet   = entry.amount + eMinCum - BUFFER;
+      const eMaxAvail = entry.amount + eTotals.totalIn - eTotals.totalBills - BUFFER;
+      const eLumpSum  = Math.max(0, Math.min(eFwdNet, eMaxAvail));
+      return {
+        date: entry.date.toISOString(),
+        amount: entry.amount,
+        fwdNet: eFwdNet,
+        maxAvail: eMaxAvail,
+        lumpSum: eLumpSum,
+      };
+    });
+
     let lumpSum;
     if (!hasAnySaved) {
       lumpSum = 0;
@@ -1641,6 +1671,7 @@ function computePeriods() {
       isUpdatedPeriod,
       isStale,
       savedEntries: savedInPeriod,
+      entryProjections,
       manualFwdNet,
       manualLumpSum,
       manualMaxAvail,
