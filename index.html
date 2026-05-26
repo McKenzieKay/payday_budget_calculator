@@ -1264,7 +1264,7 @@ function editBaselineAmount(dateIso, spanId) {
   });
 }
 
-function renderBaselineContent(overrideData, period, idSuffix) {
+function renderBaselineContent(overrideData, period, idSuffix, projection) {
   idSuffix = idSuffix || "";
   const card   = document.getElementById(idSuffix ? "baselineCard-"+idSuffix : "baselineCard");
   const header = document.getElementById(idSuffix ? "baselineHeader-"+idSuffix : "baselineHeader");
@@ -1293,10 +1293,11 @@ function renderBaselineContent(overrideData, period, idSuffix) {
     }
   }
 
-  // Look up this specific entry's own projection so it's independent of later balances
-  const myProj = period && period.entryProjections
-    ? period.entryProjections.find(p => new Date(p.date).toDateString() === overrideData.date.toDateString())
-    : null;
+  // Use this specific entry's own projection so it's independent of later balances
+  const myProj = projection ||
+    (period && period.entryProjections
+      ? period.entryProjections.find(p => new Date(p.date).toDateString() === overrideData.date.toDateString())
+      : null);
 
   const fwdNet      = myProj ? myProj.fwdNet
                     : period && period.manualFwdNet !== undefined ? period.manualFwdNet
@@ -1809,9 +1810,11 @@ function renderPeriods(periods) {
   const firstBalanceIsCurrent = current.some(r => r.isFirstBalance);
   if (firstBalanceIsCurrent && firstBalancePeriod && firstBalancePeriod.savedEntries && firstBalancePeriod.savedEntries.length > 0) {
     // Always show the ORIGINAL starting balance entry at top (not the latest)
-    const startEntry = firstBalancePeriod.savedEntries.find(e =>
+    const startIdx = firstBalancePeriod.savedEntries.findIndex(e =>
       startingBalanceDate && e.date.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString()
-    ) || firstBalancePeriod.savedEntries[0];
+    );
+    const startEntryIdx = startIdx >= 0 ? startIdx : 0;
+    const startEntry = firstBalancePeriod.savedEntries[startEntryIdx];
     const bwrap = document.createElement("div");
     bwrap.className = "baseline-box";
     bwrap.style.marginBottom = "1.5rem";
@@ -1821,11 +1824,11 @@ function renderPeriods(periods) {
         <div class="baseline-row" id="baselineRow-first"></div>
       </div>`;
     container.appendChild(bwrap);
-    renderBaselineContent(startEntry, firstBalancePeriod, "first");
+    renderBaselineContent(startEntry, firstBalancePeriod, "first", (firstBalancePeriod.entryProjections || [])[startEntryIdx]);
 
     // Render any subsequent entries in the same period as separate Current Balance cards
     firstBalancePeriod.savedEntries.forEach((entry, ei) => {
-      if (startingBalanceDate && entry.date.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString()) return;
+      if (ei === startEntryIdx) return;
       const bwrap2 = document.createElement("div");
       bwrap2.className = "baseline-box";
       bwrap2.style.marginBottom = "1.5rem";
@@ -1835,7 +1838,7 @@ function renderPeriods(periods) {
           <div class="baseline-row" id="baselineRow-first-sub-${ei}"></div>
         </div>`;
       container.appendChild(bwrap2);
-      renderBaselineContent(entry, firstBalancePeriod, `first-sub-${ei}`);
+      renderBaselineContent(entry, firstBalancePeriod, `first-sub-${ei}`, (firstBalancePeriod.entryProjections || [])[ei]);
     });
   }
 
@@ -1993,7 +1996,7 @@ function renderPeriods(periods) {
             <div class="baseline-row" id="baselineRow-${ei}-${r.payday.getTime()}"></div>
           </div>`;
         monthDiv.appendChild(bwrap);
-        renderBaselineContent(entry, r, `${ei}-${r.payday.getTime()}`);
+        renderBaselineContent(entry, r, `${ei}-${r.payday.getTime()}`, (r.entryProjections || [])[ei]);
       });
     }
   });
@@ -2036,7 +2039,7 @@ function renderPeriods(periods) {
               <div class="baseline-row" id="baselineRow-first-past-${ei}"></div>
             </div>`;
           prevMonthDiv.appendChild(bwrap);
-          renderBaselineContent(entry, r, `first-past-${ei}`);
+          renderBaselineContent(entry, r, `first-past-${ei}`, (r.entryProjections || [])[ei]);
         });
         return;
       }
@@ -2116,7 +2119,7 @@ function renderPeriods(periods) {
               <div class="baseline-row" id="baselineRow-${ei}-${r.payday.getTime()}"></div>
             </div>`;
           prevMonthDiv.appendChild(bwrap);
-          renderBaselineContent(entry, r, `${ei}-${r.payday.getTime()}`);
+          renderBaselineContent(entry, r, `${ei}-${r.payday.getTime()}`, (r.entryProjections || [])[ei]);
         });
       }
     });
