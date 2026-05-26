@@ -805,7 +805,7 @@
   <input type="date" id="balanceDate">
   <div style="display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border-strong);height:32px;padding:0 8px;gap:2px;">
     <span style="font-size:13px;color:var(--text-muted);user-select:none;">$</span>
-    <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)"
+    <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)" onkeydown="if(event.key==='Enter')saveBalance();"
       style="width:120px;font-size:13px;border:none;background:transparent;color:var(--text);padding:0;outline:none;text-align:right;">
   </div>
   <div class="badge-wrap"><div class="badge-tip" style="white-space:normal;width:220px;">Enter the day's account balance at any time to keep projections accurate going forward</div><button class="save-btn" id="saveBtn" onclick="saveBalance()">Save Balance</button></div>
@@ -1213,6 +1213,7 @@ function saveStartingBalanceFromModal() {
   if (!startingBalanceDate) {
     startingBalanceDate = newEntry.date.toISOString().slice(0, 10);
   }
+  saveToStorage();
   closeStartingBalanceModal();
   refresh();
 }
@@ -1776,7 +1777,10 @@ function renderPeriods(periods) {
   const firstBalancePeriod = [...current, ...previous].find(r => r.isFirstBalance);
   const firstBalanceIsCurrent = current.some(r => r.isFirstBalance);
   if (firstBalanceIsCurrent && firstBalancePeriod && firstBalancePeriod.savedEntries && firstBalancePeriod.savedEntries.length > 0) {
-    const entry = firstBalancePeriod.savedEntries[firstBalancePeriod.savedEntries.length - 1];
+    // Always show the ORIGINAL starting balance entry at top (not the latest)
+    const startEntry = firstBalancePeriod.savedEntries.find(e =>
+      startingBalanceDate && e.date.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString()
+    ) || firstBalancePeriod.savedEntries[0];
     const bwrap = document.createElement("div");
     bwrap.className = "baseline-box";
     bwrap.style.marginBottom = "1.5rem";
@@ -1786,7 +1790,22 @@ function renderPeriods(periods) {
         <div class="baseline-row" id="baselineRow-first"></div>
       </div>`;
     container.appendChild(bwrap);
-    renderBaselineContent(entry, firstBalancePeriod, "first");
+    renderBaselineContent(startEntry, firstBalancePeriod, "first");
+
+    // Render any subsequent entries in the same period as separate Current Balance cards
+    firstBalancePeriod.savedEntries.forEach((entry, ei) => {
+      if (startingBalanceDate && entry.date.toDateString() === new Date(startingBalanceDate + 'T00:00:00').toDateString()) return;
+      const bwrap2 = document.createElement("div");
+      bwrap2.className = "baseline-box";
+      bwrap2.style.marginBottom = "1.5rem";
+      bwrap2.innerHTML = `
+        <div class="baseline-card" id="baselineCard-first-sub-${ei}">
+          <div class="baseline-header" id="baselineHeader-first-sub-${ei}"></div>
+          <div class="baseline-row" id="baselineRow-first-sub-${ei}"></div>
+        </div>`;
+      container.appendChild(bwrap2);
+      renderBaselineContent(entry, firstBalancePeriod, `first-sub-${ei}`);
+    });
   }
 
   // Render current + next month first (top)
