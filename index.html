@@ -805,7 +805,7 @@
   <input type="date" id="balanceDate">
   <div style="display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border-strong);height:32px;padding:0 8px;gap:2px;">
     <span style="font-size:13px;color:var(--text-muted);user-select:none;">$</span>
-    <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)" onkeydown="if(event.key==='Enter')saveBalance();"
+    <input type="text" inputmode="decimal" id="balanceAmount" placeholder="0" oninput="liveFormatAmount(this)" onblur="formatAmountInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();saveBalance();}"
       style="width:120px;font-size:13px;border:none;background:transparent;color:var(--text);padding:0;outline:none;text-align:right;">
   </div>
   <div class="badge-wrap"><div class="badge-tip" style="white-space:normal;width:220px;">Enter the day's account balance at any time to keep projections accurate going forward</div><button class="save-btn" id="saveBtn" onclick="saveBalance()">Save Balance</button></div>
@@ -1993,19 +1993,20 @@ function renderPeriods(periods) {
         container.appendChild(prevMonthDiv);
       }
 
-      // First balance period in past: render as greyed-out baseline card
+      // First balance period in past: render ALL its entries as greyed-out baseline cards
       if (r.isFirstBalance && r.savedEntries && r.savedEntries.length > 0) {
-        const entry = r.savedEntries[r.savedEntries.length - 1];
-        const bwrap = document.createElement("div");
-        bwrap.className = "baseline-box";
-        bwrap.style.opacity = "0.6";
-        bwrap.innerHTML = `
-          <div class="baseline-card" id="baselineCard-first-past">
-            <div class="baseline-header" id="baselineHeader-first-past"></div>
-            <div class="baseline-row" id="baselineRow-first-past"></div>
-          </div>`;
-        prevMonthDiv.appendChild(bwrap);
-        renderBaselineContent(entry, r, "first-past");
+        r.savedEntries.forEach((entry, ei) => {
+          const bwrap = document.createElement("div");
+          bwrap.className = "baseline-box";
+          bwrap.style.opacity = "0.6";
+          bwrap.innerHTML = `
+            <div class="baseline-card" id="baselineCard-first-past-${ei}">
+              <div class="baseline-header" id="baselineHeader-first-past-${ei}"></div>
+              <div class="baseline-row" id="baselineRow-first-past-${ei}"></div>
+            </div>`;
+          prevMonthDiv.appendChild(bwrap);
+          renderBaselineContent(entry, r, `first-past-${ei}`);
+        });
         return;
       }
 
@@ -2800,6 +2801,9 @@ function showWelcome() {
 // Load saved data then render
 loadFromStorage();
 loadTooltipPref();
+// Default balance date to today
+const _bd = document.getElementById("balanceDate");
+if (_bd) { const _t = new Date(); _bd.value = `${_t.getFullYear()}-${String(_t.getMonth()+1).padStart(2,"0")}-${String(_t.getDate()).padStart(2,"0")}`; }
 refresh();
 if (!welcomeDismissed) {
   showWelcome();
